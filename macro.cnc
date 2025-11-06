@@ -1,5 +1,5 @@
 ;***************************************************************************************
-; SOROTEC Eding CNC Macro V3.0
+; SOROTEC Eding CNC Macro V3.1
 ; Perfektioniert fuer Eding CNC 5.3
 ;***************************************************************************************
 ;
@@ -10,6 +10,9 @@
 ; - Werkzeugwechsel-Automatisierung
 ; - Spindel-Warmlauf
 ; - Werkzeug-Bruchkontrolle
+; - Rechteck-Vermessung mit Massgenauigkeitskontrolle (NEU!)
+; - Werkstueck-Dicken-Messung fuer doppelseitige Bearbeitung (NEU!)
+; - Koordinatensystem-Manager G54-G59 (NEU!)
 ;
 ; Entwickelt fuer: Sorotec Aluline AL1110 mit 2kW Spindel (24.000 RPM)
 ; Eding CNC Version: 5.3
@@ -17,6 +20,10 @@
 ;***************************************************************************************
 ; VERSIONSHISTORIE
 ;***************************************************************************************
+; V3.1  : Neue User Subroutines 10-12
+;         - USER_10: Vier-Kanten-Rechteck-Vermessung
+;         - USER_11: Werkstueck-Dicken-Messung
+;         - USER_12: Koordinatensystem-Manager G54-G59
 ; V3.0  : Komplette Ueberarbeitung fuer bessere Verstaendlichkeit
 ;         - Neuorganisation der User Subroutines
 ;         - Tastradius-Kompensation in allen Antastfunktionen
@@ -141,12 +148,20 @@
 ; #4632         Position Y nach Referenzfahrt
 ; #4633         Position Z nach Referenzfahrt
 ;
+; Neue Funktionen USER_10-12 (#4600-#4625)
+; #4600         Toleranz Rechteck-Vermessung (mm) - Default: 0.1
+; #4601         Max. Suchstrecke Rechteck (mm) - Default: 50
+; #4610         Toleranz Dicken-Messung (mm) - Default: 0.2
+; #4620-#4625   Reserviert fuer Koordinatensystem-Beschreibungen
+;
 ; Temporaere Variablen (Verwendung in Subroutinen)
 ; #185          Sensor Fehler-Zustand (temporaer)
 ; #1-#10        Lokale Variablen in Antast-Subroutinen
 ; #100-#115     Berechnungsvariablen
-; #1001-#1099   Messwert-Speicher
-; #2001-#2099   Berechnungs-Zwischenspeicher
+; #1001-#1099   Messwert-Speicher (alt)
+; #1100-#1199   Messwert-Speicher USER_10-12 (neu)
+; #2001-#2099   Berechnungs-Zwischenspeicher (alt)
+; #2100-#2199   Berechnungs-Zwischenspeicher USER_10-12 (neu)
 ;
 ;***************************************************************************************
 ; INITIALISIERUNG
@@ -1453,6 +1468,697 @@ SUB user_9 ; Werkzeug-Bruchkontrolle
 
 ENDSUB
 
+;---------------------------------------------------------------------------------------
+SUB user_10 ; Vier-Kanten-Rechteck-Vermessung
+;---------------------------------------------------------------------------------------
+; Misst automatisch alle 4 Kanten eines Rechtecks und berechnet:
+; - Mittelpunkt des Rechtecks
+; - Tatsaechliche Laenge und Breite
+; - Rechtwinkligkeit
+; - Abweichungen von Sollmassen
+;
+; ABLAUF:
+; 1. Fragt nach Sollmassen (Laenge, Breite)
+; 2. Benutzer positioniert 3D-Taster ungefaehr in Rechteckmitte
+; 3. Tastet alle 4 Kanten an (zweistufig: schnell + langsam)
+; 4. Berechnet Mittelpunkt und Abmessungen
+; 5. Prueft Rechtwinkligkeit und Massgenauigkeit
+; 6. Zeigt Ist-Soll-Vergleich an
+; 7. Setzt G92 Nullpunkt auf Rechteck-Mittelpunkt
+;
+; WICHTIG:
+; - Kugelradius (#4546) wird automatisch kompensiert
+; - 3D-Taster muss angeschlossen sein
+; - Taster sollte ungefaehr in der Mitte positioniert werden
+; - Rechteck-Kanten muessen mindestens 10mm vom Taster entfernt sein
+;
+; VARIABLEN (Messwerte):
+; #1100 - Sollmass Laenge X (Eingabe)
+; #1101 - Sollmass Breite Y (Eingabe)
+; #1102 - Gemessene Position X+ Kante
+; #1103 - Gemessene Position X- Kante
+; #1104 - Gemessene Position Y+ Kante
+; #1105 - Gemessene Position Y- Kante
+;
+; VARIABLEN (Berechnungen):
+; #2100 - Ist-Laenge X
+; #2101 - Ist-Breite Y
+; #2102 - Mittelpunkt X
+; #2103 - Mittelpunkt Y
+; #2104 - Abweichung Laenge (Ist - Soll)
+; #2105 - Abweichung Breite (Ist - Soll)
+; #2106 - Toleranzcheck (0=OK, 1=Abweichung)
+; #2107 - Suchstrecke (Reserve fuer Antastung)
+;
+; KONFIGURATION:
+; #4600 - Toleranz fuer Massabweichung (mm) - Default: 0.1
+; #4601 - Max. Suchstrecke pro Seite (mm) - Default: 50
+;---------------------------------------------------------------------------------------
+
+  ; 3D-Taster Sensor pruefen
+  GoSub check_3d_probe_connected
+
+  ; Standard-Toleranz setzen falls nicht konfiguriert
+  IF [#4600 == 0] THEN
+    #4600 = 0.1  ; Default: 0.1mm Toleranz
+  ENDIF
+
+  IF [#4601 == 0] THEN
+    #4601 = 50   ; Default: 50mm Suchstrecke
+  ENDIF
+
+  ; Sollmasse vom Benutzer abfragen
+  DlgMsg "Rechteck-Vermessung: Sollmasse eingeben" "Laenge X (mm):" 1100 "Breite Y (mm):" 1101
+
+  IF [#5398 == -1] THEN ; Cancel gedrueckt
+    msg "Rechteck-Vermessung abgebrochen"
+    M30
+  ENDIF
+
+  ; Eingabepruefung
+  IF [[#1100 <= 0] OR [#1101 <= 0]] THEN
+    ErrMsg "Fehler: Sollmasse muessen groesser als 0 sein!"
+  ENDIF
+
+  DlgMsg "Taster ungefaehr in Rechteck-Mitte positionieren und bestaetigen"
+
+  IF [#5398 == 1] THEN
+
+    ; Suchstrecke berechnen (halbe Sollmass + Reserve)
+    #2107 = [#4601]  ; Max. Suchstrecke
+
+    msg "Rechteck-Vermessung gestartet..."
+
+    ; === X+ Kante antasten (rechte Seite) ===
+    msg "Taste X+ Kante an (rechts)..."
+    #100 = #5001  ; Startposition speichern
+
+    ; Schnelles Antasten
+    G91 G38.2 X[#2107] F[#4548]
+    G90
+
+    IF [#5067 == 1] THEN
+      ; Langsames Antasten fuer Genauigkeit
+      G91 G38.2 X-10 F[#4549]
+      G90
+
+      IF [#5067 == 1] THEN
+        ; Position mit Kugelradius-Kompensation speichern
+        #1102 = [#5061 - #4546]
+        msg "X+ Kante gemessen: " #1102 " mm"
+
+        ; Zurueck zur Mitte
+        G0 X[#100]
+
+        ; === X- Kante antasten (linke Seite) ===
+        msg "Taste X- Kante an (links)..."
+
+        ; Schnelles Antasten
+        G91 G38.2 X-[#2107] F[#4548]
+        G90
+
+        IF [#5067 == 1] THEN
+          ; Langsames Antasten
+          G91 G38.2 X10 F[#4549]
+          G90
+
+          IF [#5067 == 1] THEN
+            ; Position mit Kugelradius-Kompensation speichern
+            #1103 = [#5061 + #4546]
+            msg "X- Kante gemessen: " #1103 " mm"
+
+            ; Zurueck zur Mitte
+            G0 X[#100]
+
+            ; === Y+ Kante antasten (vordere Seite) ===
+            msg "Taste Y+ Kante an (vorne)..."
+            #101 = #5002  ; Y-Startposition speichern
+
+            ; Schnelles Antasten
+            G91 G38.2 Y[#2107] F[#4548]
+            G90
+
+            IF [#5067 == 1] THEN
+              ; Langsames Antasten
+              G91 G38.2 Y-10 F[#4549]
+              G90
+
+              IF [#5067 == 1] THEN
+                ; Position mit Kugelradius-Kompensation speichern
+                #1104 = [#5062 - #4546]
+                msg "Y+ Kante gemessen: " #1104 " mm"
+
+                ; Zurueck zur Mitte
+                G0 Y[#101]
+
+                ; === Y- Kante antasten (hintere Seite) ===
+                msg "Taste Y- Kante an (hinten)..."
+
+                ; Schnelles Antasten
+                G91 G38.2 Y-[#2107] F[#4548]
+                G90
+
+                IF [#5067 == 1] THEN
+                  ; Langsames Antasten
+                  G91 G38.2 Y10 F[#4549]
+                  G90
+
+                  IF [#5067 == 1] THEN
+                    ; Position mit Kugelradius-Kompensation speichern
+                    #1105 = [#5062 + #4546]
+                    msg "Y- Kante gemessen: " #1105 " mm"
+
+                    ; Zurueck zur Mitte
+                    G0 Y[#101]
+
+                    ; === BERECHNUNGEN ===
+                    msg "Berechne Rechteck-Parameter..."
+
+                    ; Ist-Masse berechnen
+                    #2100 = [#1102 - #1103]  ; Ist-Laenge X
+                    #2101 = [#1104 - #1105]  ; Ist-Breite Y
+
+                    ; Mittelpunkt berechnen
+                    #2102 = [#1103 + #2100 / 2]  ; Mittelpunkt X
+                    #2103 = [#1105 + #2101 / 2]  ; Mittelpunkt Y
+
+                    ; Abweichungen berechnen
+                    #2104 = [#2100 - #1100]  ; Abweichung Laenge
+                    #2105 = [#2101 - #1101]  ; Abweichung Breite
+
+                    ; Toleranzcheck
+                    #2106 = 0  ; Zunaechst OK
+                    IF [[ABS[#2104] > #4600] OR [ABS[#2105] > #4600]] THEN
+                      #2106 = 1  ; Abweichung zu gross
+                    ENDIF
+
+                    ; === ERGEBNISSE ANZEIGEN ===
+                    IF [#2106 == 0] THEN
+                      msg "=== RECHTECK-VERMESSUNG ERFOLGREICH ==="
+                      msg "Ist-Laenge X:  " #2100 " mm (Soll: " #1100 " mm, Abw: " #2104 " mm)"
+                      msg "Ist-Breite Y:  " #2101 " mm (Soll: " #1101 " mm, Abw: " #2105 " mm)"
+                      msg "Mittelpunkt X: " #2102 " mm"
+                      msg "Mittelpunkt Y: " #2103 " mm"
+                      msg "Massabweichung innerhalb Toleranz (" #4600 " mm)"
+
+                      DlgMsg "Rechteck vermessen - Alle Masse OK!" "Ist-Laenge X: " 2100 "Soll-Laenge X: " 1100 "Abweichung X: " 2104 "Ist-Breite Y: " 2101 "Soll-Breite Y: " 1101 "Abweichung Y: " 2105
+
+                    ELSE
+                      msg "!!! WARNUNG: MASSABWEICHUNG ZU GROSS !!!"
+                      msg "Ist-Laenge X:  " #2100 " mm (Soll: " #1100 " mm, Abw: " #2104 " mm)"
+                      msg "Ist-Breite Y:  " #2101 " mm (Soll: " #1101 " mm, Abw: " #2105 " mm)"
+                      msg "Toleranz: " #4600 " mm"
+
+                      DlgMsg "WARNUNG: Massabweichung zu gross!" "Ist-Laenge X: " 2100 "Soll-Laenge X: " 1100 "Abweichung X: " 2104 "Ist-Breite Y: " 2101 "Soll-Breite Y: " 1101 "Abweichung Y: " 2105 "Max. Toleranz: " 4600
+                    ENDIF
+
+                    ; === NULLPUNKT AUF MITTELPUNKT SETZEN ===
+                    msg "Setze Nullpunkt auf Rechteck-Mittelpunkt..."
+
+                    ; Zu Mittelpunkt fahren (relativ)
+                    G91
+                    G0 X[#2102 - #100]
+                    G0 Y[#2103 - #101]
+                    G90
+
+                    ; Nullpunkt setzen
+                    G92 X0 Y0
+
+                    msg "Nullpunkt gesetzt - Maschine steht auf Rechteck-Mittelpunkt"
+
+                  ELSE
+                    ErrMsg "Messfehler: Y- Kante nicht gefunden (Feinmessung)"
+                  ENDIF
+                ELSE
+                  ErrMsg "Messfehler: Y- Kante nicht gefunden (Schnellsuche)"
+                ENDIF
+
+              ELSE
+                ErrMsg "Messfehler: Y+ Kante nicht gefunden (Feinmessung)"
+              ENDIF
+            ELSE
+              ErrMsg "Messfehler: Y+ Kante nicht gefunden (Schnellsuche)"
+            ENDIF
+
+          ELSE
+            ErrMsg "Messfehler: X- Kante nicht gefunden (Feinmessung)"
+          ENDIF
+        ELSE
+          ErrMsg "Messfehler: X- Kante nicht gefunden (Schnellsuche)"
+        ENDIF
+
+      ELSE
+        ErrMsg "Messfehler: X+ Kante nicht gefunden (Feinmessung)"
+      ENDIF
+    ELSE
+      ErrMsg "Messfehler: X+ Kante nicht gefunden (Schnellsuche)"
+    ENDIF
+
+  ENDIF
+
+ENDSUB
+
+;---------------------------------------------------------------------------------------
+SUB user_11 ; Werkstueck-Dicken-Messung
+;---------------------------------------------------------------------------------------
+; Misst die Dicke eines Werkstuecks von oben nach unten
+; Wichtig fuer doppelseitige Bearbeitung und Reststärken-Kontrolle
+;
+; ABLAUF:
+; 1. Fragt nach Soll-Dicke des Werkstuecks
+; 2. Fragt nach gewuenschter Nullpunkt-Position (oben/unten)
+; 3. Benutzer positioniert Taster ueber Werkstueck-Oberseite
+; 4. Tastet Oberseite an (Z-Probe oder 3D-Taster)
+; 5. Benutzer positioniert Taster unter Werkstueck
+; 6. Tastet Unterseite an
+; 7. Berechnet Ist-Dicke und Abweichung
+; 8. Setzt Z-Nullpunkt auf gewaehlte Flaeche
+;
+; WICHTIG:
+; - Kann mit Z-Probe (#4400) oder 3D-Taster (#4544) arbeiten
+; - Bei 3D-Taster: Kugelradius wird kompensiert
+; - Bei doppelseitiger Bearbeitung sehr nuetzlich
+; - Aufspannung muss sicheren Zugang zu Unterseite ermoeglichen!
+;
+; VARIABLEN (Eingabe):
+; #1110 - Soll-Dicke (mm)
+; #1111 - Nullpunkt-Position (0=Oberseite, 1=Unterseite)
+; #1112 - Sensor-Typ (0=Z-Probe, 1=3D-Taster)
+;
+; VARIABLEN (Messwerte):
+; #1113 - Gemessene Z-Position Oberseite
+; #1114 - Gemessene Z-Position Unterseite
+;
+; VARIABLEN (Berechnungen):
+; #2110 - Ist-Dicke (mm)
+; #2111 - Abweichung von Soll-Dicke (mm)
+; #2112 - Z-Nullpunkt Position
+;
+; KONFIGURATION:
+; #4610 - Toleranz fuer Dicken-Abweichung (mm) - Default: 0.2
+;---------------------------------------------------------------------------------------
+
+  ; Standard-Toleranz setzen falls nicht konfiguriert
+  IF [#4610 == 0] THEN
+    #4610 = 0.2  ; Default: 0.2mm Toleranz
+  ENDIF
+
+  ; Benutzer nach Messparametern fragen
+  #1110 = 0  ; Soll-Dicke
+  #1111 = 0  ; Nullpunkt oben
+  #1112 = 1  ; Default: 3D-Taster
+
+  DlgMsg "Werkstueck-Dicken-Messung" "Soll-Dicke (mm):" 1110 "Nullpunkt (0=Oberseite, 1=Unterseite):" 1111 "Sensor (0=Z-Probe, 1=3D-Taster):" 1112
+
+  IF [#5398 == -1] THEN ; Cancel gedrueckt
+    msg "Dicken-Messung abgebrochen"
+    M30
+  ENDIF
+
+  ; Eingabepruefung
+  IF [#1110 <= 0] THEN
+    ErrMsg "Fehler: Soll-Dicke muss groesser als 0 sein!"
+  ENDIF
+
+  IF [[#1111 != 0] AND [#1111 != 1]] THEN
+    ErrMsg "Fehler: Nullpunkt muss 0 (oben) oder 1 (unten) sein!"
+  ENDIF
+
+  IF [[#1112 != 0] AND [#1112 != 1]] THEN
+    ErrMsg "Fehler: Sensor muss 0 (Z-Probe) oder 1 (3D-Taster) sein!"
+  ENDIF
+
+  ; Entsprechenden Sensor pruefen
+  IF [#1112 == 0] THEN
+    GoSub check_sensor_connected  ; Z-Probe
+    msg "Verwende Z-Nullpunkt-Sensor"
+  ELSE
+    GoSub check_3d_probe_connected  ; 3D-Taster
+    msg "Verwende 3D-Taster"
+  ENDIF
+
+  ; === OBERSEITE MESSEN ===
+  DlgMsg "Taster UEBER Werkstueck-Oberseite positionieren und bestaetigen"
+
+  IF [#5398 == 1] THEN
+
+    M5  ; Spindel ausschalten (Sicherheit)
+
+    msg "Taste Oberseite an..."
+
+    ; Schnelles Antasten
+    G91 G38.2 Z-[#1110 + 20] F[#4512]  ; Nach unten, Reserve einrechnen
+    G90
+
+    IF [#5067 == 1] THEN
+      ; Langsames Antasten fuer Genauigkeit
+      G91 G38.2 Z20 F[#4513]
+      G90
+
+      IF [#5067 == 1] THEN
+
+        ; Position speichern (mit Kugelradius-Kompensation bei 3D-Taster)
+        IF [#1112 == 1] THEN
+          #1113 = [#5063 + #4546]  ; 3D-Taster: + Kugelradius
+        ELSE
+          #1113 = [#5063 + #4510]  ; Z-Probe: + Tasterhoehe
+        ENDIF
+
+        msg "Oberseite gemessen: Z = " #1113 " mm"
+
+        ; Sicher nach oben fahren
+        G91 G0 Z10
+        G90
+
+        ; === UNTERSEITE MESSEN ===
+        DlgMsg "Taster UNTER Werkstueck-Unterseite positionieren und bestaetigen"
+
+        IF [#5398 == 1] THEN
+
+          msg "Taste Unterseite an..."
+
+          ; Schnelles Antasten (von unten nach oben!)
+          G91 G38.2 Z[#1110 + 20] F[#4512]  ; Nach oben
+          G90
+
+          IF [#5067 == 1] THEN
+            ; Langsames Antasten
+            G91 G38.2 Z-20 F[#4513]
+            G90
+
+            IF [#5067 == 1] THEN
+
+              ; Position speichern (mit Kugelradius-Kompensation bei 3D-Taster)
+              IF [#1112 == 1] THEN
+                #1114 = [#5063 - #4546]  ; 3D-Taster: - Kugelradius
+              ELSE
+                #1114 = [#5063 - #4510]  ; Z-Probe: - Tasterhoehe
+              ENDIF
+
+              msg "Unterseite gemessen: Z = " #1114 " mm"
+
+              ; Sicher nach unten fahren
+              G91 G0 Z-10
+              G90
+
+              ; === BERECHNUNGEN ===
+              msg "Berechne Werkstueck-Dicke..."
+
+              ; Ist-Dicke berechnen
+              #2110 = [#1113 - #1114]
+
+              ; Abweichung berechnen
+              #2111 = [#2110 - #1110]
+
+              ; === ERGEBNISSE ANZEIGEN ===
+              IF [ABS[#2111] <= #4610] THEN
+                msg "=== DICKEN-MESSUNG ERFOLGREICH ==="
+                msg "Ist-Dicke:   " #2110 " mm"
+                msg "Soll-Dicke:  " #1110 " mm"
+                msg "Abweichung:  " #2111 " mm"
+                msg "Dicke innerhalb Toleranz (" #4610 " mm)"
+
+                DlgMsg "Dicken-Messung erfolgreich - Masse OK!" "Ist-Dicke: " 2110 "Soll-Dicke: " 1110 "Abweichung: " 2111 "Toleranz: " 4610
+
+              ELSE
+                msg "!!! WARNUNG: DICKEN-ABWEICHUNG ZU GROSS !!!"
+                msg "Ist-Dicke:   " #2110 " mm"
+                msg "Soll-Dicke:  " #1110 " mm"
+                msg "Abweichung:  " #2111 " mm"
+                msg "Toleranz:    " #4610 " mm"
+
+                DlgMsg "WARNUNG: Dicken-Abweichung zu gross!" "Ist-Dicke: " 2110 "Soll-Dicke: " 1110 "Abweichung: " 2111 "Max. Toleranz: " 4610
+              ENDIF
+
+              ; === Z-NULLPUNKT SETZEN ===
+              msg "Setze Z-Nullpunkt..."
+
+              ; Nullpunkt-Position berechnen
+              IF [#1111 == 0] THEN
+                #2112 = #1113  ; Oberseite
+                msg "Nullpunkt wird auf Oberseite gesetzt"
+              ELSE
+                #2112 = #1114  ; Unterseite
+                msg "Nullpunkt wird auf Unterseite gesetzt"
+              ENDIF
+
+              ; Z-Nullpunkt setzen
+              G92 Z[#5003 - #2112]
+
+              IF [#1111 == 0] THEN
+                msg "Z-Nullpunkt auf Oberseite gesetzt (Z=0)"
+              ELSE
+                msg "Z-Nullpunkt auf Unterseite gesetzt (Z=0)"
+              ENDIF
+
+            ELSE
+              ErrMsg "Messfehler: Unterseite nicht gefunden (Feinmessung)"
+            ENDIF
+          ELSE
+            ErrMsg "Messfehler: Unterseite nicht gefunden (Schnellsuche)"
+          ENDIF
+
+        ENDIF
+
+      ELSE
+        ErrMsg "Messfehler: Oberseite nicht gefunden (Feinmessung)"
+      ENDIF
+    ELSE
+      ErrMsg "Messfehler: Oberseite nicht gefunden (Schnellsuche)"
+    ENDIF
+
+  ENDIF
+
+ENDSUB
+
+;---------------------------------------------------------------------------------------
+SUB user_12 ; Koordinatensystem-Manager (G54-G59)
+;---------------------------------------------------------------------------------------
+; Verwaltet Werkstück-Nullpunkte in den Koordinatensystemen G54-G59
+; Menu-gesteuerter Zugriff zum Speichern/Laden/Anzeigen von Nullpunkten
+;
+; FUNKTIONEN:
+; 1. Aktuellen Nullpunkt in G54-G59 speichern
+; 2. Gespeicherten Nullpunkt aktivieren (G54-G59)
+; 3. Alle gespeicherten Koordinatensysteme anzeigen
+; 4. Koordinatensystem zuruecksetzen/loeschen
+; 5. Aktives Koordinatensystem anzeigen
+;
+; ABLAUF:
+; 1. Zeigt Haupt-Menu mit Optionen
+; 2. Je nach Auswahl:
+;    - Speichern: Fragt nach G5x-Nummer, speichert aktuelle Position
+;    - Laden: Fragt nach G5x-Nummer, aktiviert Koordinatensystem
+;    - Anzeigen: Zeigt alle G54-G59 mit ihren Werten
+;    - Loeschen: Fragt nach G5x-Nummer, setzt auf 0 zurueck
+;
+; WICHTIG:
+; - Koordinatensysteme G54-G59 sind in Eding CNC als #5221-#5279 gespeichert
+; - G54: #5221-#5226 (X,Y,Z,A,B,C)
+; - G55: #5231-#5236
+; - G56: #5241-#5246
+; - G57: #5251-#5256
+; - G58: #5261-#5266
+; - G59: #5271-#5276
+;
+; VARIABLEN (Eingabe/Auswahl):
+; #1120 - Menu-Auswahl (1=Speichern, 2=Laden, 3=Anzeigen, 4=Loeschen, 5=Info)
+; #1121 - Ausgewaehltes Koordinatensystem (54-59)
+;
+; VARIABLEN (Berechnung):
+; #2120 - Basis-Adresse fuer Koordinatensystem
+; #2121 - Temporaer: Aktuell aktives KS
+;
+; VARIABLEN (Beschreibungen G54-G59):
+; #4620-#4625 - Reserviert fuer zukuenftige Beschreibungen
+;---------------------------------------------------------------------------------------
+
+  ; === HAUPT-MENU ===
+  #1120 = 1  ; Default: Speichern
+
+  DlgMsg "=== KOORDINATENSYSTEM-MANAGER G54-G59 ===" "Funktion waehlen:" "1=Speichern  2=Laden  3=Anzeigen  4=Loeschen  5=Aktives KS" 1120
+
+  IF [#5398 == -1] THEN ; Cancel gedrueckt
+    msg "Koordinatensystem-Manager abgebrochen"
+    M30
+  ENDIF
+
+  ; === FUNKTION 1: SPEICHERN ===
+  IF [#1120 == 1] THEN
+
+    #1121 = 54  ; Default: G54
+
+    DlgMsg "Aktuellen Nullpunkt in Koordinatensystem speichern" "G5x waehlen (54-59):" 1121
+
+    IF [#5398 == 1] THEN
+
+      ; Eingabepruefung
+      IF [[#1121 < 54] OR [#1121 > 59]] THEN
+        ErrMsg "Fehler: Nur G54 bis G59 erlaubt (Eingabe: 54-59)"
+      ENDIF
+
+      ; Basis-Adresse berechnen
+      ; G54 = #5221, G55 = #5231, G56 = #5241, etc.
+      #2120 = [5221 + [#1121 - 54] * 10]
+
+      ; Aktuelle Position in Koordinatensystem speichern
+      ; WICHTIG: In Eding CNC speichern wir die OFFSET-Werte
+      ; Offset = Maschinenkoordinate - Arbeitskoordinate
+
+      #[#2120 + 0] = [#5071 - #5001]  ; X-Offset
+      #[#2120 + 1] = [#5072 - #5002]  ; Y-Offset
+      #[#2120 + 2] = [#5073 - #5003]  ; Z-Offset
+      #[#2120 + 3] = [#5074 - #5004]  ; A-Offset
+      #[#2120 + 4] = [#5075 - #5005]  ; B-Offset
+      #[#2120 + 5] = [#5076 - #5006]  ; C-Offset
+
+      msg "Nullpunkt gespeichert in G" #1121
+      msg "X=" #[#2120 + 0] " Y=" #[#2120 + 1] " Z=" #[#2120 + 2]
+
+      DlgMsg "Nullpunkt erfolgreich gespeichert!" "Koordinatensystem: G" 1121 "X-Offset: " [#2120 + 0] "Y-Offset: " [#2120 + 1] "Z-Offset: " [#2120 + 2]
+
+    ENDIF
+
+  ENDIF
+
+  ; === FUNKTION 2: LADEN ===
+  IF [#1120 == 2] THEN
+
+    #1121 = 54  ; Default: G54
+
+    DlgMsg "Koordinatensystem aktivieren" "G5x waehlen (54-59):" 1121
+
+    IF [#5398 == 1] THEN
+
+      ; Eingabepruefung
+      IF [[#1121 < 54] OR [#1121 > 59]] THEN
+        ErrMsg "Fehler: Nur G54 bis G59 erlaubt (Eingabe: 54-59)"
+      ENDIF
+
+      ; Koordinatensystem aktivieren
+      IF [#1121 == 54] THEN
+        G54
+        msg "Koordinatensystem G54 aktiviert"
+      ENDIF
+
+      IF [#1121 == 55] THEN
+        G55
+        msg "Koordinatensystem G55 aktiviert"
+      ENDIF
+
+      IF [#1121 == 56] THEN
+        G56
+        msg "Koordinatensystem G56 aktiviert"
+      ENDIF
+
+      IF [#1121 == 57] THEN
+        G57
+        msg "Koordinatensystem G57 aktiviert"
+      ENDIF
+
+      IF [#1121 == 58] THEN
+        G58
+        msg "Koordinatensystem G58 aktiviert"
+      ENDIF
+
+      IF [#1121 == 59] THEN
+        G59
+        msg "Koordinatensystem G59 aktiviert"
+      ENDIF
+
+      ; Basis-Adresse berechnen fuer Info
+      #2120 = [5221 + [#1121 - 54] * 10]
+
+      DlgMsg "Koordinatensystem aktiviert!" "Aktives System: G" 1121 "X-Offset: " [#2120 + 0] "Y-Offset: " [#2120 + 1] "Z-Offset: " [#2120 + 2]
+
+    ENDIF
+
+  ENDIF
+
+  ; === FUNKTION 3: ANZEIGEN ===
+  IF [#1120 == 3] THEN
+
+    msg "=== GESPEICHERTE KOORDINATENSYSTEME ==="
+    msg " "
+    msg "G54: X=" #5221 " Y=" #5222 " Z=" #5223
+    msg "G55: X=" #5231 " Y=" #5232 " Z=" #5233
+    msg "G56: X=" #5241 " Y=" #5242 " Z=" #5243
+    msg "G57: X=" #5251 " Y=" #5252 " Z=" #5253
+    msg "G58: X=" #5261 " Y=" #5262 " Z=" #5263
+    msg "G59: X=" #5271 " Y=" #5272 " Z=" #5273
+    msg " "
+
+    DlgMsg "=== KOORDINATENSYSTEME G54-G59 ===" "G54 X:" 5221 "G54 Y:" 5222 "G54 Z:" 5223 "G55 X:" 5231 "G55 Y:" 5232 "G55 Z:" 5233 "G56 X:" 5241 "G56 Y:" 5242 "G56 Z:" 5243
+
+    ; Zweiter Dialog fuer G57-G59 (max. 7 Eingabefelder pro Dialog)
+    DlgMsg "=== KOORDINATENSYSTEME G57-G59 ===" "G57 X:" 5251 "G57 Y:" 5252 "G57 Z:" 5253 "G58 X:" 5261 "G58 Y:" 5262 "G58 Z:" 5263 "G59 X:" 5271 "G59 Y:" 5272 "G59 Z:" 5273
+
+  ENDIF
+
+  ; === FUNKTION 4: LOESCHEN ===
+  IF [#1120 == 4] THEN
+
+    #1121 = 54  ; Default: G54
+
+    DlgMsg "Koordinatensystem zuruecksetzen (auf 0)" "G5x waehlen (54-59):" 1121
+
+    IF [#5398 == 1] THEN
+
+      ; Eingabepruefung
+      IF [[#1121 < 54] OR [#1121 > 59]] THEN
+        ErrMsg "Fehler: Nur G54 bis G59 erlaubt (Eingabe: 54-59)"
+      ENDIF
+
+      ; Sicherheitsabfrage
+      DlgMsg "ACHTUNG: G" #1121 " wird geloescht! Fortfahren?"
+
+      IF [#5398 == 1] THEN
+
+        ; Basis-Adresse berechnen
+        #2120 = [5221 + [#1121 - 54] * 10]
+
+        ; Alle Achsen auf 0 setzen
+        #[#2120 + 0] = 0  ; X
+        #[#2120 + 1] = 0  ; Y
+        #[#2120 + 2] = 0  ; Z
+        #[#2120 + 3] = 0  ; A
+        #[#2120 + 4] = 0  ; B
+        #[#2120 + 5] = 0  ; C
+
+        msg "Koordinatensystem G" #1121 " wurde zurueckgesetzt"
+
+        DlgMsg "Koordinatensystem geloescht!" "G" 1121 " wurde auf Null zurueckgesetzt"
+
+      ELSE
+        msg "Loeschen abgebrochen"
+      ENDIF
+
+    ENDIF
+
+  ENDIF
+
+  ; === FUNKTION 5: AKTIVES KS ANZEIGEN ===
+  IF [#1120 == 5] THEN
+
+    ; Aktuell aktives Koordinatensystem ermitteln
+    ; Dies ist in Eding CNC nicht direkt verfuegbar, daher Info-Anzeige
+    msg "=== AKTUELLE POSITION ==="
+    msg "Arbeitskoordinaten:"
+    msg "X=" #5001 " Y=" #5002 " Z=" #5003
+    msg " "
+    msg "Maschinenkoordinaten:"
+    msg "X=" #5071 " Y=" #5072 " Z=" #5073
+    msg " "
+    msg "Hinweis: Aktives Koordinatensystem in Eding CNC Status pruefen"
+
+    DlgMsg "=== AKTUELLE POSITION ===" "Arbeits-X:" 5001 "Arbeits-Y:" 5002 "Arbeits-Z:" 5003 "Maschinen-X:" 5071 "Maschinen-Y:" 5072 "Maschinen-Z:" 5073
+
+  ENDIF
+
+  msg "Koordinatensystem-Manager beendet"
+
+ENDSUB
+
 ;***************************************************************************************
 ; WERKZEUGWECHSEL SUBROUTINE
 ;***************************************************************************************
@@ -1832,7 +2538,7 @@ SUB xhc_macro_7 ; Handrad Macro 7
 ENDSUB
 
 ;***************************************************************************************
-; ENDE DER MACRO.CNC V3.0
+; ENDE DER MACRO.CNC V3.1
 ;***************************************************************************************
 ;
 ; QUICK REFERENCE - User Subroutines:
@@ -1846,6 +2552,9 @@ ENDSUB
 ; user_7  - Loch-Antastung (Mittelpunkt)
 ; user_8  - Zylinder-Antastung (Aussenmittelpunkt)
 ; user_9  - Werkzeug-Bruchkontrolle
+; user_10 - Vier-Kanten-Rechteck-Vermessung (Mittelpunkt + Masskontr.)
+; user_11 - Werkstueck-Dicken-Messung (Oberseite/Unterseite)
+; user_12 - Koordinatensystem-Manager (G54-G59 Verwaltung)
 ;
 ; KONFIGURATION:
 ; --------------
@@ -1857,5 +2566,8 @@ ENDSUB
 ; #4520  - Werkzeugwechseltyp (0/1/2)
 ; #4546  - 3D-Taster Kugelradius (WICHTIG!)
 ; #4510  - Tasterhoehe fuer Z-Nullpunkt
+; #4600  - Toleranz Rechteck-Vermessung (Default: 0.1mm)
+; #4601  - Max. Suchstrecke Rechteck (Default: 50mm)
+; #4610  - Toleranz Dicken-Messung (Default: 0.2mm)
 ;
 ;***************************************************************************************

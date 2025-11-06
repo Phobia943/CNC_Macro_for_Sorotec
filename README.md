@@ -15,6 +15,9 @@ Professionelles und anfängerfreundliches CNC-Makro für Sorotec CNC-Maschinen m
 - **User Sub 7: Bohrungstastung** - Mittelpunktsermittlung von Bohrungen
 - **User Sub 8: Zapfentastung** - Mittelpunktsermittlung von zylindrischen Zapfen
 - **User Sub 9: Werkzeugbruchkontrolle** - Verschleißerkennung und Bruchwarnung
+- **User Sub 10: Vier-Kanten-Rechteck-Vermessung** - Automatische Messung aller 4 Kanten mit Maßkontrolle (NEU!)
+- **User Sub 11: Werkstück-Dicken-Messung** - Präzise Dickenmessung für doppelseitige Bearbeitung (NEU!)
+- **User Sub 12: Koordinatensystem-Manager** - Komfortable Verwaltung von G54-G59 Nullpunkten (NEU!)
 
 ### Besondere Merkmale
 
@@ -107,6 +110,108 @@ gosub user_8    ; Zapfen antasten (Mittelpunkt finden)
 gosub user_9    ; Werkzeugbruchkontrolle
 ```
 
+### Erweiterte Messfunktionen (NEU in V3.1)
+
+```gcode
+gosub user_10   ; Rechteck mit 4 Kanten vermessen (Mittelpunkt + Maßkontrolle)
+gosub user_11   ; Werkstück-Dicke messen (Oberseite + Unterseite)
+gosub user_12   ; Koordinatensysteme G54-G59 verwalten
+```
+
+#### USER_10: Vier-Kanten-Rechteck-Vermessung
+
+Diese Funktion vermisst automatisch alle 4 Kanten eines Rechtecks:
+
+**Funktionen:**
+- Misst alle 4 Kanten automatisch (X+, X-, Y+, Y-)
+- Berechnet Mittelpunkt des Rechtecks
+- Berechnet tatsächliche Länge und Breite
+- Vergleicht Ist-Maße mit Soll-Maßen
+- Zeigt Abweichungen an
+- Setzt Nullpunkt auf Rechteck-Mittelpunkt
+- Automatische Kugelradius-Kompensation
+
+**Anwendung:**
+1. Taster ungefähr in Rechteck-Mitte positionieren
+2. `gosub user_10` aufrufen
+3. Soll-Maße eingeben (Länge X, Breite Y)
+4. Messung läuft automatisch
+5. Ergebnis mit Ist-Soll-Vergleich wird angezeigt
+
+**Parameter:**
+- `#4600` - Toleranz für Maßabweichung (Default: 0.1mm)
+- `#4601` - Maximale Suchstrecke (Default: 50mm)
+
+#### USER_11: Werkstück-Dicken-Messung
+
+Misst die Dicke eines Werkstücks von Oberseite zu Unterseite:
+
+**Funktionen:**
+- Misst Oberseite des Werkstücks
+- Misst Unterseite des Werkstücks
+- Berechnet tatsächliche Dicke
+- Vergleicht mit Soll-Dicke
+- Setzt Z-Nullpunkt wahlweise auf Ober- oder Unterseite
+- Arbeitet mit Z-Probe oder 3D-Taster
+- Wichtig für doppelseitige Bearbeitung
+
+**Anwendung:**
+1. `gosub user_11` aufrufen
+2. Soll-Dicke eingeben
+3. Nullpunkt-Position wählen (0=Oberseite, 1=Unterseite)
+4. Sensor-Typ wählen (0=Z-Probe, 1=3D-Taster)
+5. Taster über Oberseite positionieren → Messen
+6. Taster unter Unterseite positionieren → Messen
+7. Ergebnis mit Abweichung wird angezeigt
+
+**Parameter:**
+- `#4610` - Toleranz für Dicken-Abweichung (Default: 0.2mm)
+
+**Hinweis:** Werkstück muss so aufgespannt sein, dass die Unterseite zugänglich ist!
+
+#### USER_12: Koordinatensystem-Manager (G54-G59)
+
+Komfortable Verwaltung der Werkstück-Nullpunkte G54-G59:
+
+**Funktionen:**
+1. **Speichern**: Aktuellen Nullpunkt in G54-G59 speichern
+2. **Laden**: Gespeicherten Nullpunkt aktivieren
+3. **Anzeigen**: Alle gespeicherten Koordinatensysteme anzeigen
+4. **Löschen**: Koordinatensystem zurücksetzen
+5. **Info**: Aktuelle Position anzeigen
+
+**Anwendung:**
+1. `gosub user_12` aufrufen
+2. Funktion wählen (1-5)
+3. Bei Speichern/Laden/Löschen: G5x-Nummer eingeben (54-59)
+4. Bestätigen
+
+**Beispiel-Workflow:**
+```gcode
+; Werkstück 1 antasten und in G54 speichern
+gosub user_6         ; Ecke antasten
+gosub user_12        ; Koordinatensystem-Manager
+; → Funktion 1 (Speichern) wählen
+; → G54 wählen
+
+; Werkstück 2 antasten und in G55 speichern
+gosub user_6         ; Ecke antasten
+gosub user_12        ; Koordinatensystem-Manager
+; → Funktion 1 (Speichern) wählen
+; → G55 wählen
+
+; Später: G54 aktivieren für Werkstück 1
+gosub user_12
+; → Funktion 2 (Laden) wählen
+; → G54 wählen
+```
+
+**Vorteile:**
+- Mehrere Werkstücke ohne Neuantasten bearbeiten
+- Schneller Wechsel zwischen Werkstücken
+- Übersichtliche Anzeige aller gespeicherten Nullpunkte
+- Sicheres Löschen mit Bestätigungsabfrage
+
 ### Typischer Workflow
 
 1. **Maschine referenzieren**
@@ -169,6 +274,9 @@ Eine vollständige Dokumentation aller verwendeten Variablen findest du im Makro
 - **#4510-#4513**: Z-Nullpunkt
 - **#4544-#4549**: 3D-Taster (inkl. #4546 Tastradius!)
 - **#4550-#4566**: Werkstück-Tastung
+- **#4600-#4601**: Rechteck-Vermessung (NEU!)
+- **#4610**: Dicken-Messung (NEU!)
+- **#4620-#4625**: Koordinatensystem-Beschreibungen (reserviert, NEU!)
 
 ## 🤝 Beiträge
 
@@ -196,8 +304,8 @@ Basierend auf dem Original-Makropaket von Sorotec, weiterentwickelt und optimier
 
 ---
 
-**Version:** 3.0
-**Letzte Aktualisierung:** 2025
+**Version:** 3.1
+**Letzte Aktualisierung:** Januar 2025
 **Status:** Produktionsreif
 
 ## 📚 Weiterführende Links

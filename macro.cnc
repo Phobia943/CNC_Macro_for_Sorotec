@@ -164,6 +164,11 @@
 ; #2100-#2199   Berechnungs-Zwischenspeicher USER_10-12 (neu)
 ;
 ;***************************************************************************************
+; EINHEITEN-DEFINITION
+;***************************************************************************************
+G71  ; Metrisches System (Millimeter)
+
+;***************************************************************************************
 ; INITIALISIERUNG
 ;***************************************************************************************
 
@@ -269,7 +274,7 @@ SUB config
 
   ; Pruefung: Ist ein Job geladen/aktiv?
   ; Im Rendermodus (#5397=1) oder Simulationsmodus (#5380=1) nicht ausfuehren
-  IF [[#5397 == 1] OR [#5380 == 1]] THEN
+  IF [#5397 == 1] OR [#5380 == 1] THEN
     ErrMsg "CONFIG darf nicht aus Programmen aufgerufen werden! Bitte per MDI: gosub config"
   ENDIF
 
@@ -418,7 +423,7 @@ SUB user_1 ; Werkzeuglaengenmessung
   msg "Werkzeug wird vermessen"
   DlgMsg "Werkzeug vermessen?" "Geschaetzte Werkzeuglaenge ca. (mm):" 5017
 
-  IF [[#5398 == 1] AND [#5397 == 0]] THEN ; OK gedrueckt UND nicht im Rendermodus
+  IF [#5398 == 1] AND [#5397 == 0] THEN ; OK gedrueckt UND nicht im Rendermodus
 
     ; Sicherheitspruefung 1: Werkzeuglaenge muss positiv sein
     IF [#5017 <= 0] THEN
@@ -432,7 +437,7 @@ SUB user_1 ; Werkzeuglaengenmessung
     ENDIF
 
     ; Wenn immer noch ungueltige Eingabe: Abbruch
-    IF [[#5017 <= 0] OR [[#4509 + #5017 + 10] > [#4506]]] THEN
+    IF [#5017 <= 0] OR [[#4509 + #5017 + 10] > [#4506]] THEN
       ErrMsg "Werkzeuglaengenmessung abgebrochen - Ungueltige Laenge"
     ENDIF
 
@@ -564,7 +569,7 @@ SUB user_2 ; Z-Nullpunktermittlung
 ;---------------------------------------------------------------------------------------
 
   ; Pruefung: Wurde Werkzeug vermessen? (nur bei aktivem Laengensensor)
-  IF [[#3501 == 1] OR [#4520 < 2]] THEN
+  IF [#3501 == 1] OR [#4520 < 2] THEN
 
     ; Sensorzustand pruefen
     GoSub check_sensor_connected
@@ -575,7 +580,7 @@ SUB user_2 ; Z-Nullpunktermittlung
     ENDIF
     #3505 = 0  ; Handrad-Merker zuruecksetzen
 
-    IF [[#5398 == 1] AND [#5397 == 0]] THEN ; OK UND nicht im Rendermodus
+    IF [#5398 == 1] AND [#5397 == 0] THEN ; OK UND nicht im Rendermodus
 
       M5  ; Spindel ausschalten (Sicherheit!)
 
@@ -1393,7 +1398,7 @@ SUB user_9 ; Werkzeug-Bruchkontrolle
 
         ; Toleranzpruefung
         ; Ist Abweichung innerhalb Toleranz?
-        IF [[[#5021 + #4528] > [#4501]] AND [[#5021 - #4528] < [#4501]]] THEN
+        IF [[#5021 + #4528] > [#4501]] AND [[#5021 - #4528] < [#4501]] THEN
 
           ; Werkzeug OK
           msg "Bruchkontrolle OK - Abweichung: " [#5021 - #4501] " mm"
@@ -1536,7 +1541,7 @@ SUB user_10 ; Vier-Kanten-Rechteck-Vermessung
   ENDIF
 
   ; Eingabepruefung
-  IF [[#1100 <= 0] OR [#1101 <= 0]] THEN
+  IF [#1100 <= 0] OR [#1101 <= 0] THEN
     ErrMsg "Fehler: Sollmasse muessen groesser als 0 sein!"
   ENDIF
 
@@ -1648,7 +1653,7 @@ SUB user_10 ; Vier-Kanten-Rechteck-Vermessung
 
                     ; Toleranzcheck
                     #2106 = 0  ; Zunaechst OK
-                    IF [[ABS[#2104] > #4600] OR [ABS[#2105] > #4600]] THEN
+                    IF [ABS[#2104] > #4600] OR [ABS[#2105] > #4600] THEN
                       #2106 = 1  ; Abweichung zu gross
                     ENDIF
 
@@ -1780,11 +1785,11 @@ SUB user_11 ; Werkstueck-Dicken-Messung
     ErrMsg "Fehler: Soll-Dicke muss groesser als 0 sein!"
   ENDIF
 
-  IF [[#1111 != 0] AND [#1111 != 1]] THEN
+  IF [#1111 != 0] AND [#1111 != 1] THEN
     ErrMsg "Fehler: Nullpunkt muss 0 (oben) oder 1 (unten) sein!"
   ENDIF
 
-  IF [[#1112 != 0] AND [#1112 != 1]] THEN
+  IF [#1112 != 0] AND [#1112 != 1] THEN
     ErrMsg "Fehler: Sensor muss 0 (Z-Probe) oder 1 (3D-Taster) sein!"
   ENDIF
 
@@ -1993,7 +1998,7 @@ SUB user_12 ; Koordinatensystem-Manager (G54-G59)
     IF [#5398 == 1] THEN
 
       ; Eingabepruefung
-      IF [[#1121 < 54] OR [#1121 > 59]] THEN
+      IF [#1121 < 54] OR [#1121 > 59] THEN
         ErrMsg "Fehler: Nur G54 bis G59 erlaubt (Eingabe: 54-59)"
       ENDIF
 
@@ -2031,7 +2036,7 @@ SUB user_12 ; Koordinatensystem-Manager (G54-G59)
     IF [#5398 == 1] THEN
 
       ; Eingabepruefung
-      IF [[#1121 < 54] OR [#1121 > 59]] THEN
+      IF [#1121 < 54] OR [#1121 > 59] THEN
         ErrMsg "Fehler: Nur G54 bis G59 erlaubt (Eingabe: 54-59)"
       ENDIF
 
@@ -2105,7 +2110,7 @@ SUB user_12 ; Koordinatensystem-Manager (G54-G59)
     IF [#5398 == 1] THEN
 
       ; Eingabepruefung
-      IF [[#1121 < 54] OR [#1121 > 59]] THEN
+      IF [#1121 < 54] OR [#1121 > 59] THEN
         ErrMsg "Fehler: Nur G54 bis G59 erlaubt (Eingabe: 54-59)"
       ENDIF
 
@@ -2271,7 +2276,7 @@ SUB change_tool
       IF [#3503 == 1] THEN
 
         ; Optional: Bruchkontrolle VOR Wechsel
-        IF [[#5008 > 0] AND [#4529 == 1]] THEN
+        IF [#5008 > 0] AND [#4529 == 1] THEN
           #3504 = 1              ; Merker: Von Automatik aufgerufen
           GoSub user_9           ; Bruchkontrolle
           #3504 = 0

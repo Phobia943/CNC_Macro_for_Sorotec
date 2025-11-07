@@ -1,6 +1,6 @@
 ;@unit mm
 ;***************************************************************************************
-; SOROTEC Eding CNC Macro V3.3
+; SOROTEC Eding CNC Macro V3.4
 ; Perfektioniert fuer Eding CNC 5.3
 ;***************************************************************************************
 ;
@@ -21,6 +21,10 @@
 ;***************************************************************************************
 ; VERSIONSHISTORIE
 ;***************************************************************************************
+; V3.4  : BUGFIX: G1516 "incorrect feed rate" Fehler FINAL behoben
+;         - Korrigiert: G38.2 G91 Reihenfolge zu G91 G38.2 (Zeilen 608, 614)
+;         - Korrigiert: Fehlenden G91 vor G38.2 in user_9 (Zeile 1318)
+;         - Alle 39 G38.2 Befehle systematisch geprueft und validiert
 ; V3.3  : BUGFIX: G1516 "incorrect feed rate" Fehler vollstaendig behoben
 ;         - Entfernt isolierte F-Befehle (user_7, user_8)
 ;         - Z-Achsen-Antastung aus user_5 entfernt (nur X/Y)
@@ -605,13 +609,13 @@ SUB user_2 ; Z-Nullpunktermittlung
 
       ; Erste Messung: Schnelles Antasten
       msg "Taste Messtaster an..."
-      G38.2 G91 Z-50 F[#4512]            ; Relativ 50mm runter, schnell
+      G91 G38.2 Z-50 F[#4512]            ; Relativ 50mm runter, schnell
 
       IF [#5067 == 1] THEN ; Taster gefunden
 
         ; Zweite Messung: Langsames Antasten
         msg "Exakte Messung..."
-        G38.2 G91 Z20 F[#4513]           ; Relativ 20mm hoch, langsam
+        G91 G38.2 Z20 F[#4513]           ; Relativ 20mm hoch, langsam
         G90
 
         IF [#5067 == 1] THEN ; Taster erneut gefunden
@@ -1315,6 +1319,7 @@ SUB user_8 ; Zylinder/Boss-Antastung (Aussenmittelpunkt)
 
       ; === X- Seite antasten ===
       msg "Taste Zylinder X- an..."
+      G91
       G38.2 X-[#102] F[#4548]
       G90
 

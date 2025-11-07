@@ -1,6 +1,6 @@
 ;@unit mm
 ;***************************************************************************************
-; SOROTEC Eding CNC Macro V3.4
+; SOROTEC Eding CNC Macro V3.5
 ; Perfektioniert fuer Eding CNC 5.3
 ;***************************************************************************************
 ;
@@ -21,6 +21,13 @@
 ;***************************************************************************************
 ; VERSIONSHISTORIE
 ;***************************************************************************************
+; V3.5  : BUGFIX KRITISCH: G1516 Fehler - Fehlende G90/G91 Modal-Befehle bei G38.2
+;         - user_6: G90 G38.2 fuer absolute Koordinaten (4 Korrekturen Zeilen 1022,1037,1052,1067)
+;         - user_7: G91 G38.2 konsolidiert fuer relative Koordinaten (7 Korrekturen)
+;         - user_8: G91 G38.2 konsolidiert + LOGIK-FEHLER behoben (Zeilen 1315-1319)
+;           * Bewegungssequenz war in G90 statt G91 -> Kollisionsgefahr!
+;         - ALLE 39 G38.2 Befehle haben nun expliziten Modal-Befehl (G90/G91/G53)
+;         - Vollstaendige Dokumentation: G1516_FIX_DOKUMENTATION.md
 ; V3.4  : BUGFIX: G1516 "incorrect feed rate" Fehler FINAL behoben
 ;         - Korrigiert: G38.2 G91 Reihenfolge zu G91 G38.2 (Zeilen 608, 614)
 ;         - Korrigiert: Fehlenden G91 vor G38.2 in user_9 (Zeile 1318)
@@ -1019,7 +1026,7 @@ SUB user_6 ; Ecken-Antastung mit Rotationsberechnung (2 Kanten)
     #100 = [#5001 + 10]
 
     msg "Taste linke Kante (oben) an..."
-    G38.2 X[#100] F[#4548]
+    G90 G38.2 X[#100] F[#4548]
 
     IF [#5067 == 1] THEN
       #1011 = [#5061 - #4546]  ; X1 mit Kugelradius-Kompensation
@@ -1034,7 +1041,7 @@ SUB user_6 ; Ecken-Antastung mit Rotationsberechnung (2 Kanten)
         #100 = [#5001 + 10]
 
         msg "Taste linke Kante (unten) an..."
-        G38.2 X[#100] F[#4548]
+        G90 G38.2 X[#100] F[#4548]
 
         IF [#5067 == 1] THEN
           #1021 = [#5061 - #4546]  ; X2 mit Kugelradius-Kompensation
@@ -1049,7 +1056,7 @@ SUB user_6 ; Ecken-Antastung mit Rotationsberechnung (2 Kanten)
             #100 = [#5002 + 10]
 
             msg "Taste untere Kante (links) an..."
-            G38.2 Y[#100] F[#4548]
+            G90 G38.2 Y[#100] F[#4548]
 
             IF [#5067 == 1] THEN
               #1031 = #5061            ; X3
@@ -1064,7 +1071,7 @@ SUB user_6 ; Ecken-Antastung mit Rotationsberechnung (2 Kanten)
                 #100 = [#5002 + 10]
 
                 msg "Taste untere Kante (rechts) an..."
-                G38.2 Y[#100] F[#4548]
+                G90 G38.2 Y[#100] F[#4548]
 
                 IF [#5067 == 1] THEN
                   #1041 = #5061            ; X4
@@ -1178,8 +1185,7 @@ SUB user_7 ; Loch-Antastung (Mittelpunkt finden)
     ; === X- Richtung antasten ===
     #101 = #5001      ; X-Position speichern
     msg "Taste Loch X- an..."
-    G91
-    G38.2 X-[#102] F[#4548]
+    G91 G38.2 X-[#102] F[#4548]
     G90
 
     IF [#5067 == 1] THEN
@@ -1188,8 +1194,7 @@ SUB user_7 ; Loch-Antastung (Mittelpunkt finden)
 
       ; === X+ Richtung antasten ===
       msg "Taste Loch X+ an..."
-      G91
-      G38.2 X[#102] F[#4548]
+      G91 G38.2 X[#102] F[#4548]
       G90
 
       IF [#5067 == 1] THEN
@@ -1200,8 +1205,7 @@ SUB user_7 ; Loch-Antastung (Mittelpunkt finden)
         ; === Y- Richtung antasten ===
         #101 = #5002
         msg "Taste Loch Y- an..."
-        G91
-        G38.2 Y-[#102] F[#4548]
+        G91 G38.2 Y-[#102] F[#4548]
         G90
 
         IF [#5067 == 1] THEN
@@ -1210,8 +1214,7 @@ SUB user_7 ; Loch-Antastung (Mittelpunkt finden)
 
           ; === Y+ Richtung antasten ===
           msg "Taste Loch Y+ an..."
-          G91
-          G38.2 Y[#102] F[#4548]
+          G91 G38.2 Y[#102] F[#4548]
           G90
 
           IF [#5067 == 1] THEN
@@ -1222,15 +1225,13 @@ SUB user_7 ; Loch-Antastung (Mittelpunkt finden)
             ; === Durchmesser-Verifikation (optional) ===
             ; Nochmal X+ messen fuer Durchmesser-Kontrolle
             G0 X[#104 - 1]
-            G91
-            G38.2 X[#102] F[#4548]
+            G91 G38.2 X[#102] F[#4548]
             G90
             #106 = [#5061 - #4546]
 
             ; X- messen
             G0 X-[#104 - 1]
-            G91
-            G38.2 X-[#102] F[#4548]
+            G91 G38.2 X-[#102] F[#4548]
             G90
             #107 = [#106 - [#5061 + #4546]]  ; Durchmesser X
 
@@ -1238,8 +1239,7 @@ SUB user_7 ; Loch-Antastung (Mittelpunkt finden)
 
             ; Y+ messen
             G0 Y[#105 - 1]
-            G91
-            G38.2 Y[#102] F[#4548]
+            G91 G38.2 Y[#102] F[#4548]
             G90
             #108 = [#5062 - #4546 - #100]    ; Durchmesser Y
 
@@ -1305,22 +1305,22 @@ SUB user_8 ; Zylinder/Boss-Antastung (Aussenmittelpunkt)
     ; === X+ Seite antasten ===
     #101 = #5001
     msg "Taste Zylinder X+ an..."
-    G91
-    G38.2 X[#102] F[#4548]
+    G91 G38.2 X[#102] F[#4548]
     G90
 
     IF [#5067 == 1] THEN
       #100 = [#5061 - #4546]  ; X+ Kante - Kugelradius
 
       ; Nach oben fahren und zur anderen Seite
+      G91
       G0 Z[#4511]
       G0 X[#102]
       G0 Z-[#102]
+      G90
 
       ; === X- Seite antasten ===
       msg "Taste Zylinder X- an..."
-      G91
-      G38.2 X-[#102] F[#4548]
+      G91 G38.2 X-[#102] F[#4548]
       G90
 
       IF [#5067 == 1] THEN
@@ -1338,7 +1338,8 @@ SUB user_8 ; Zylinder/Boss-Antastung (Aussenmittelpunkt)
         G0 Y[#101 + #102 / 2]
         G91
         G0 Z-[#102]
-        G38.2 Y[#102] F[#4548]
+        G90
+        G91 G38.2 Y[#102] F[#4548]
         G90
 
         IF [#5067 == 1] THEN
@@ -1349,7 +1350,8 @@ SUB user_8 ; Zylinder/Boss-Antastung (Aussenmittelpunkt)
           G0 Z[#4511]
           G0 Y-[#102]
           G0 Z-[#102]
-          G38.2 Y-[#102] F[#4548]
+          G90
+          G91 G38.2 Y-[#102] F[#4548]
           G90
 
           IF [#5067 == 1] THEN

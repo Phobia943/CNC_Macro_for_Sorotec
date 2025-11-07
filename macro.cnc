@@ -1786,11 +1786,11 @@ SUB user_11 ; Werkstueck-Dicken-Messung
     ErrMsg "Fehler: Soll-Dicke muss groesser als 0 sein!"
   ENDIF
 
-  IF [[#1111 != 0] AND [#1111 != 1]] THEN
+  IF [[#1111 < 0] OR [#1111 > 1]] THEN
     ErrMsg "Fehler: Nullpunkt muss 0 (oben) oder 1 (unten) sein!"
   ENDIF
 
-  IF [[#1112 != 0] AND [#1112 != 1]] THEN
+  IF [[#1112 < 0] OR [#1112 > 1]] THEN
     ErrMsg "Fehler: Sensor muss 0 (Z-Probe) oder 1 (3D-Taster) sein!"
   ENDIF
 

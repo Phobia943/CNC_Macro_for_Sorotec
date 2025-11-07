@@ -1,6 +1,6 @@
 ;@unit mm
 ;***************************************************************************************
-; SOROTEC Eding CNC Macro V3.1
+; SOROTEC Eding CNC Macro V3.2
 ; Perfektioniert fuer Eding CNC 5.3
 ;***************************************************************************************
 ;
@@ -21,6 +21,11 @@
 ;***************************************************************************************
 ; VERSIONSHISTORIE
 ;***************************************************************************************
+; V3.2  : BUGFIX: G1516 "incorrect feed rate" Fehler behoben
+;         - Standard-Initialisierung fuer #4548 und #4549 hinzugefuegt
+;         - USER_5 erweitert: Jetzt mit Z-Achsen-Antastung (Z+ Oberseite)
+;         - Neue Dialog-Logik: Erst Achse (X/Y/Z), dann Richtung (+/-)
+;         - Variablen #1200 (Achse) und #1201 (Richtung) statt #4550
 ; V3.1  : Neue User Subroutines 10-12
 ;         - USER_10: Vier-Kanten-Rechteck-Vermessung
 ;         - USER_11: Werkstueck-Dicken-Messung
@@ -161,6 +166,8 @@
 ; #100-#115     Berechnungsvariablen
 ; #1001-#1099   Messwert-Speicher (alt)
 ; #1100-#1199   Messwert-Speicher USER_10-12 (neu)
+; #1200         USER_5: Achsen-Merker (1=X, 2=Y, 3=Z)
+; #1201         USER_5: Richtungs-Merker (1=positiv, 2=negativ)
 ; #2001-#2099   Berechnungs-Zwischenspeicher (alt)
 ; #2100-#2199   Berechnungs-Zwischenspeicher USER_10-12 (neu)
 ;
@@ -193,6 +200,14 @@ IF [#3500 == 0] THEN ; Einmalige Initialisierung beim ersten Start
   ENDIF
   IF [#4513 == 0] THEN
     #4513 = 20       ; Tastgeschwindigkeit Feinmessung (mm/min)
+  ENDIF
+
+  ; Standard-Werte fuer 3D-Taster (WICHTIG gegen G1516 Fehler!)
+  IF [#4548 == 0] THEN
+    #4548 = 200      ; 3D-Taster Anfahrgeschwindigkeit (mm/min)
+  ENDIF
+  IF [#4549 == 0] THEN
+    #4549 = 50       ; 3D-Taster Tastgeschwindigkeit (mm/min)
   ENDIF
 ENDIF
 
@@ -741,48 +756,93 @@ ENDSUB
 ;---------------------------------------------------------------------------------------
 SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
 ;---------------------------------------------------------------------------------------
-; Tastet eine einzelne Kante an und setzt den Nullpunkt automatisch auf 0
+; Tastet eine einzelne Kante oder Oberflaeche an und setzt den Nullpunkt automatisch auf 0
 ; Kompensiert den Kugelradius des 3D-Tasters automatisch!
 ;
 ; ABLAUF:
-; 1. Fragt ZUERST nach Richtung (Sicherheit: vor Bewegung!)
+; 1. Fragt ZUERST nach Achse und Richtung (Sicherheit: vor Bewegung!)
 ; 2. Tastet in gewaehlter Richtung an (zweistufig: schnell + langsam)
 ; 3. Berechnet Kantenposition INKLUSIVE Kugelradius-Kompensation
-; 4. Setzt G92 auf 0 an der gemessenen Kante
-; 5. Faehrt 1mm von Kante weg
+; 4. Setzt G92 auf 0 an der gemessenen Kante/Oberflaeche
+; 5. Faehrt 1mm von Kante/Oberflaeche weg
 ;
-; RICHTUNGEN:
-; 1 = X+ (Kante rechts, Nullpunkt = Kante - Kugelradius)
-; 2 = X- (Kante links, Nullpunkt = Kante + Kugelradius)
-; 3 = Y+ (Kante vorne, Nullpunkt = Kante - Kugelradius)
-; 4 = Y- (Kante hinten, Nullpunkt = Kante + Kugelradius)
+; ACHSEN UND RICHTUNGEN:
+; Achse 1 (X): Richtung 1=X+ (rechts), 2=X- (links)
+; Achse 2 (Y): Richtung 1=Y+ (vorne), 2=Y- (hinten)
+; Achse 3 (Z): Richtung 1=Z+ (Oberseite), 2=Z- (Unterseite)
 ;
 ; WICHTIG:
 ; - Kugelradius muss in CONFIG korrekt eingestellt sein! (#4546)
 ; - 3D-Taster muss als Werkzeug 98 oder 99 geladen sein
 ; - Wirkt auf aktuell aktives Koordinatensystem (G54-G59)
+; - Z-Antastung benoetigt Messtaster-Dicke (#4510) bei Z+ (Oberseite)
 ;
 ; VARIABLEN:
-; #4550 - Richtungs-Merker
+; #1200 - Achsen-Merker (1=X, 2=Y, 3=Z)
+; #1201 - Richtungs-Merker (1=positiv, 2=negativ)
 ; #4546 - Kugelradius des 3D-Tasters
 ; #4548 - Anfahrgeschwindigkeit
 ; #4549 - Tastgeschwindigkeit
+; #4512 - Z-Antastgeschwindigkeit schnell (fuer Z-Achse)
+; #4513 - Z-Tastgeschwindigkeit langsam (fuer Z-Achse)
+; #4510 - Tasterhoehe (fuer Z+ Oberseite)
 ;---------------------------------------------------------------------------------------
 
-  ; 3D-Taster Sensor pruefen
-  GoSub check_3d_probe_connected
+  ; 3D-Taster Sensor pruefen (fuer X/Y)
+  ; Fuer Z wird spaeter geprueft welcher Sensor benoetigt wird
 
-  ; WICHTIG: ZUERST nach Richtung fragen, BEVOR Bewegung startet!
-  DlgMsg "Einzelkante antasten - Richtung waehlen" "1=X+ / 2=X- / 3=Y+ / 4=Y-" 4550
+  ; SCHRITT 1: Achse auswaehlen
+  DlgMsg "Einzelkante antasten - Achse waehlen" "1=X-Achse / 2=Y-Achse / 3=Z-Achse" 1200
 
   IF [#5398 == -1] THEN ; Cancel gedrueckt
     msg "Kantenmessung abgebrochen"
-    #4550 = 0
+    #1200 = 0
     M30
   ENDIF
 
+  ; SCHRITT 2: Richtung auswaehlen
+  IF [#1200 == 1] THEN
+    DlgMsg "X-Achse - Richtung waehlen" "1 = X+ (rechts) / 2 = X- (links)" 1201
+  ENDIF
+
+  IF [#1200 == 2] THEN
+    DlgMsg "Y-Achse - Richtung waehlen" "1 = Y+ (vorne) / 2 = Y- (hinten)" 1201
+  ENDIF
+
+  IF [#1200 == 3] THEN
+    DlgMsg "Z-Achse - Richtung waehlen" "1 = Z+ (Oberseite) / 2 = Z- (Unterseite)" 1201
+  ENDIF
+
+  IF [#5398 == -1] THEN ; Cancel gedrueckt
+    msg "Kantenmessung abgebrochen"
+    #1200 = 0
+    #1201 = 0
+    M30
+  ENDIF
+
+  ; Sensorpruefung je nach Achse
+  IF [[#1200 == 1] OR [#1200 == 2]] THEN
+    ; X oder Y Achse: 3D-Taster erforderlich
+    GoSub check_3d_probe_connected
+  ENDIF
+
+  IF [#1200 == 3] THEN
+    ; Z-Achse: Je nach Richtung anderen Sensor pruefen
+    IF [#1201 == 1] THEN
+      ; Z+ (Oberseite): 3D-Taster fuer Oberflaechenmessung
+      GoSub check_3d_probe_connected
+    ELSE
+      ; Z- (Unterseite): Messtaster fuer Unterkante
+      ; Wird in der Routine geprueft
+    ENDIF
+  ENDIF
+
+  ;======================================================================================
+  ; X-ACHSE ANTASTUNG
+  ;======================================================================================
+
   ; X+ Richtung (Kante rechts vom Taster)
-  IF [#4550 == 1] THEN
+  IF [[#1200 == 1] AND [#1201 == 1]] THEN
     msg "Taste X+ Kante an..."
 
     ; Schnelles Antasten
@@ -811,11 +871,12 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
       ErrMsg "FEHLER: Kante nicht gefunden (Schnellsuche)"
     ENDIF
 
-    #4550 = 0 ; Merker zuruecksetzen
+    #1200 = 0
+    #1201 = 0
   ENDIF
 
   ; X- Richtung (Kante links vom Taster)
-  IF [#4550 == 2] THEN
+  IF [[#1200 == 1] AND [#1201 == 2]] THEN
     msg "Taste X- Kante an..."
 
     ; Schnelles Antasten
@@ -844,11 +905,16 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
       ErrMsg "FEHLER: Kante nicht gefunden (Schnellsuche)"
     ENDIF
 
-    #4550 = 0
+    #1200 = 0
+    #1201 = 0
   ENDIF
 
+  ;======================================================================================
+  ; Y-ACHSE ANTASTUNG
+  ;======================================================================================
+
   ; Y+ Richtung (Kante vorne)
-  IF [#4550 == 3] THEN
+  IF [[#1200 == 2] AND [#1201 == 1]] THEN
     msg "Taste Y+ Kante an..."
 
     ; Schnelles Antasten
@@ -877,11 +943,12 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
       ErrMsg "FEHLER: Kante nicht gefunden (Schnellsuche)"
     ENDIF
 
-    #4550 = 0
+    #1200 = 0
+    #1201 = 0
   ENDIF
 
   ; Y- Richtung (Kante hinten)
-  IF [#4550 == 4] THEN
+  IF [[#1200 == 2] AND [#1201 == 2]] THEN
     msg "Taste Y- Kante an..."
 
     ; Schnelles Antasten
@@ -910,7 +977,58 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
       ErrMsg "FEHLER: Kante nicht gefunden (Schnellsuche)"
     ENDIF
 
-    #4550 = 0
+    #1200 = 0
+    #1201 = 0
+  ENDIF
+
+  ;======================================================================================
+  ; Z-ACHSE ANTASTUNG
+  ;======================================================================================
+
+  ; Z+ Richtung (Oberseite mit 3D-Taster)
+  IF [[#1200 == 3] AND [#1201 == 1]] THEN
+    msg "Taste Z+ Oberseite an..."
+
+    ; Spindel und Kuehlung aus (Sicherheit)
+    M5 M9
+
+    ; Schnelles Antasten nach unten
+    G91 G38.2 Z-50 F[#4512]
+    G90
+
+    IF [#5067 == 1] THEN
+      ; Langsames Antasten fuer Genauigkeit
+      G91 G38.2 Z20 F[#4513]
+      G90
+
+      IF [#5067 == 1] THEN
+        ; Nullpunkt setzen MIT Kugelradius-Kompensation
+        ; Z+ Richtung: Oberseite = Messpunkt - Kugelradius
+        G92 Z[0 - #4546]
+
+        ; 5mm nach oben wegfahren
+        G91 G0 Z5
+        G90
+
+        msg "Z+ Oberseite gemessen, Nullpunkt gesetzt (Radius kompensiert)"
+      ELSE
+        ErrMsg "FEHLER: Oberseite nicht gefunden (Feinmessung)"
+      ENDIF
+    ELSE
+      ErrMsg "FEHLER: Oberseite nicht gefunden (Schnellsuche)"
+    ENDIF
+
+    #1200 = 0
+    #1201 = 0
+  ENDIF
+
+  ; Z- Richtung (Unterseite - NICHT implementiert, da praktisch schwierig)
+  IF [[#1200 == 3] AND [#1201 == 2]] THEN
+    msg "WARNUNG: Z- Unterseite erfordert spezielle Aufspannung!"
+    DlgMsg "Z- Unterseite antasten" "Diese Funktion ist nicht implementiert. Verwenden Sie stattdessen Z+ Oberseite!"
+
+    #1200 = 0
+    #1201 = 0
   ENDIF
 
 ENDSUB

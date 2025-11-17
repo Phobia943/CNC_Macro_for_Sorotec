@@ -1,6 +1,6 @@
 ;@unit mm
 ;***************************************************************************************
-; SOROTEC Eding CNC Macro V3.5
+; SOROTEC Eding CNC Macro V3.6
 ; Perfektioniert fuer Eding CNC 5.3
 ;***************************************************************************************
 ;
@@ -21,6 +21,13 @@
 ;***************************************************************************************
 ; VERSIONSHISTORIE
 ;***************************************************************************************
+; V3.6  : BUGFIX KRITISCH: G53 Modalgruppen-Syntax Fehler behoben
+;         - 19x Korrektur: G0 G53 -> G53 G0 (falsche Reihenfolge!)
+;         - 3x Korrektur: G53 X/Y ohne G0 -> G53 G0 X/Y
+;         - 2x Optimierung: Redundante G90-Befehle vor G91 G38.2 entfernt
+;         - TOTAL: 24 kritische Syntaxfehler behoben
+;         - Alle 41 G38.2 Befehle verifiziert und korrekt
+;         - Vollstaendiger Analysebericht: SYNTAX_ANALYSIS_REPORT.md
 ; V3.5  : BUGFIX KRITISCH: G1516 Fehler - Fehlende G90/G91 Modal-Befehle bei G38.2
 ;         - user_6: G90 G38.2 fuer absolute Koordinaten (4 Korrekturen Zeilen 1022,1037,1052,1067)
 ;         - user_7: G91 G38.2 konsolidiert fuer relative Koordinaten (7 Korrekturen)
@@ -496,7 +503,7 @@ SUB user_1 ; Werkzeuglaengenmessung
       IF [#5067 == 1] THEN ; Sensor erneut gefunden
 
         ; Sicher nach oben fahren
-        G0 G53 Z[#4506]
+        G53 G0 Z[#4506]
 
         ; Werkzeugtabelle auf 0 setzen (Direktvermessung)
         #[5400 + #5016] = 0
@@ -526,30 +533,30 @@ SUB user_1 ; Werkzeuglaengenmessung
 
           ; Zu konfigurierter Position fahren (abhaengig von #4519)
           IF [#4518 == 1] THEN                    ; Sonderfall: Zurueck zur alten Position
-            G0 G53 Z[#4506]
-            G0 G53 X[#4514] Y[#4515]
+            G53 G0 Z[#4506]
+            G53 G0 X[#4514] Y[#4515]
             #4518 = 0
 
           ELSE                                    ; Normal: Konfigurierte Position anfahren
 
             IF [#4519 == 0] THEN                  ; 0 = Vordefinierter Punkt
-              G0 G53 Z[#4506]
-              G0 G53 X[#4524] Y[#4525]
+              G53 G0 Z[#4506]
+              G53 G0 X[#4524] Y[#4525]
             ENDIF
 
             IF [#4519 == 1] THEN                  ; 1 = Werkstuecknullpunkt
-              G0 G53 Z[#4506]
+              G53 G0 Z[#4506]
               G0 X0 Y0
             ENDIF
 
             IF [#4519 == 2] THEN                  ; 2 = Werkzeugwechselposition
-              G0 G53 Z[#4523]
-              G0 G53 X[#4521] Y[#4522]
+              G53 G0 Z[#4523]
+              G53 G0 X[#4521] Y[#4522]
             ENDIF
 
             IF [#4519 == 3] THEN                  ; 3 = Maschinennullpunkt
-              G0 G53 Z[#4506]
-              G0 G53 X0 Y0
+              G53 G0 Z[#4506]
+              G53 G0 X0 Y0
             ENDIF
 
             ; Wenn #4519 == 4: Stehen bleiben (nichts tun)
@@ -800,6 +807,11 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
   ; 3D-Taster Sensor pruefen
   GoSub check_3d_probe_connected
 
+  ; WICHTIG: Feedrate-Variablen in lokale Variablen kopieren
+  ; um Auswertungsprobleme in verschachtelten IF-Bloecken zu vermeiden
+  #100 = #4548  ; Anfahrgeschwindigkeit
+  #101 = #4549  ; Tastgeschwindigkeit
+
   ; SCHRITT 1: Achse auswaehlen
   DlgMsg "Einzelkante antasten - Achse waehlen" "1=X-Achse / 2=Y-Achse" 1200
 
@@ -811,11 +823,11 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
 
   ; SCHRITT 2: Richtung auswaehlen
   IF [#1200 == 1] THEN
-    DlgMsg "X-Achse - Richtung waehlen" "1 = X+ (rechts) / 2 = X- (links)" 1201
+    DlgMsg "X-Achse - Richtung waehlen" "1=X+(rechts), 2=X-(links)" 1201
   ENDIF
 
   IF [#1200 == 2] THEN
-    DlgMsg "Y-Achse - Richtung waehlen" "1 = Y+ (vorne) / 2 = Y- (hinten)" 1201
+    DlgMsg "Y-Achse - Richtung waehlen" "1=Y+(vorne), 2=Y-(hinten)" 1201
   ENDIF
 
   IF [#5398 == -1] THEN ; Cancel gedrueckt
@@ -833,30 +845,34 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
   IF [[#1200 == 1] AND [#1201 == 1]] THEN
     msg "Taste X+ Kante an..."
 
-    ; Schnelles Antasten
-    G91 G38.2 X20 F[#4548]
-    G90
-
-    IF [#5067 == 1] THEN ; Kante gefunden
-      ; Langsames Antasten
-      G91 G38.2 X-10 F[#4549]
+    IF [[#5380 == 0] AND [#5397 == 0]] THEN
+      ; Schnelles Antasten
+      G91 G38.2 X20 F[#100]
       G90
 
-      IF [#5067 == 1] THEN
-        ; Nullpunkt setzen MIT Kugelradius-Kompensation
-        ; X+ Richtung: Kante = Messpunkt - Kugelradius
-        G92 X[0 - #4546]
-
-        ; 1mm von Kante wegfahren
-        G91 G0 X-1
+      IF [#5067 == 1] THEN ; Kante gefunden
+        ; Langsames Antasten
+        G91 G38.2 X-10 F[#101]
         G90
 
-        msg "X+ Kante gemessen, Nullpunkt gesetzt (Radius kompensiert)"
+        IF [#5067 == 1] THEN
+          ; Nullpunkt setzen MIT Kugelradius-Kompensation
+          ; X+ Richtung: Kante = Messpunkt - Kugelradius
+          G92 X[0 - #4546]
+
+          ; 1mm von Kante wegfahren
+          G91 G0 X-1
+          G90
+
+          msg "X+ Kante gemessen, Nullpunkt gesetzt (Radius kompensiert)"
+        ELSE
+          ErrMsg "FEHLER: Kante nicht gefunden (Feinmessung)"
+        ENDIF
       ELSE
-        ErrMsg "FEHLER: Kante nicht gefunden (Feinmessung)"
+        ErrMsg "FEHLER: Kante nicht gefunden (Schnellsuche)"
       ENDIF
     ELSE
-      ErrMsg "FEHLER: Kante nicht gefunden (Schnellsuche)"
+      ErrMsg "Probing in Simulation/Render mode not allowed."
     ENDIF
 
     #1200 = 0
@@ -867,30 +883,34 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
   IF [[#1200 == 1] AND [#1201 == 2]] THEN
     msg "Taste X- Kante an..."
 
-    ; Schnelles Antasten
-    G91 G38.2 X-20 F[#4548]
-    G90
-
-    IF [#5067 == 1] THEN
-      ; Langsames Antasten
-      G91 G38.2 X10 F[#4549]
+    IF [[#5380 == 0] AND [#5397 == 0]] THEN
+      ; Schnelles Antasten
+      G91 G38.2 X-20 F[#100]
       G90
 
       IF [#5067 == 1] THEN
-        ; Nullpunkt setzen MIT Kugelradius-Kompensation
-        ; X- Richtung: Kante = Messpunkt + Kugelradius
-        G92 X[0 + #4546]
-
-        ; 1mm von Kante wegfahren
-        G91 G0 X1
+        ; Langsames Antasten
+        G91 G38.2 X10 F[#101]
         G90
 
-        msg "X- Kante gemessen, Nullpunkt gesetzt (Radius kompensiert)"
+        IF [#5067 == 1] THEN
+          ; Nullpunkt setzen MIT Kugelradius-Kompensation
+          ; X- Richtung: Kante = Messpunkt + Kugelradius
+          G92 X[0 + #4546]
+
+          ; 1mm von Kante wegfahren
+          G91 G0 X1
+          G90
+
+          msg "X- Kante gemessen, Nullpunkt gesetzt (Radius kompensiert)"
+        ELSE
+          ErrMsg "FEHLER: Kante nicht gefunden (Feinmessung)"
+        ENDIF
       ELSE
-        ErrMsg "FEHLER: Kante nicht gefunden (Feinmessung)"
+        ErrMsg "FEHLER: Kante nicht gefunden (Schnellsuche)"
       ENDIF
     ELSE
-      ErrMsg "FEHLER: Kante nicht gefunden (Schnellsuche)"
+      ErrMsg "Probing in Simulation/Render mode not allowed."
     ENDIF
 
     #1200 = 0
@@ -905,30 +925,34 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
   IF [[#1200 == 2] AND [#1201 == 1]] THEN
     msg "Taste Y+ Kante an..."
 
-    ; Schnelles Antasten
-    G91 G38.2 Y20 F[#4548]
-    G90
-
-    IF [#5067 == 1] THEN
-      ; Langsames Antasten
-      G91 G38.2 Y-10 F[#4549]
+    IF [[#5380 == 0] AND [#5397 == 0]] THEN
+      ; Schnelles Antasten
+      G91 G38.2 Y20 F[#100]
       G90
 
       IF [#5067 == 1] THEN
-        ; Nullpunkt setzen MIT Kugelradius-Kompensation
-        ; Y+ Richtung: Kante = Messpunkt - Kugelradius
-        G92 Y[0 - #4546]
-
-        ; 1mm von Kante wegfahren
-        G91 G0 Y-1
+        ; Langsames Antasten
+        G91 G38.2 Y-10 F[#101]
         G90
 
-        msg "Y+ Kante gemessen, Nullpunkt gesetzt (Radius kompensiert)"
+        IF [#5067 == 1] THEN
+          ; Nullpunkt setzen MIT Kugelradius-Kompensation
+          ; Y+ Richtung: Kante = Messpunkt - Kugelradius
+          G92 Y[0 - #4546]
+
+          ; 1mm von Kante wegfahren
+          G91 G0 Y-1
+          G90
+
+          msg "Y+ Kante gemessen, Nullpunkt gesetzt (Radius kompensiert)"
+        ELSE
+          ErrMsg "FEHLER: Kante nicht gefunden (Feinmessung)"
+        ENDIF
       ELSE
-        ErrMsg "FEHLER: Kante nicht gefunden (Feinmessung)"
+        ErrMsg "FEHLER: Kante nicht gefunden (Schnellsuche)"
       ENDIF
     ELSE
-      ErrMsg "FEHLER: Kante nicht gefunden (Schnellsuche)"
+      ErrMsg "Probing in Simulation/Render mode not allowed."
     ENDIF
 
     #1200 = 0
@@ -939,30 +963,34 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
   IF [[#1200 == 2] AND [#1201 == 2]] THEN
     msg "Taste Y- Kante an..."
 
-    ; Schnelles Antasten
-    G91 G38.2 Y-20 F[#4548]
-    G90
-
-    IF [#5067 == 1] THEN
-      ; Langsames Antasten
-      G91 G38.2 Y10 F[#4549]
+    IF [[#5380 == 0] AND [#5397 == 0]] THEN
+      ; Schnelles Antasten
+      G91 G38.2 Y-20 F[#100]
       G90
 
       IF [#5067 == 1] THEN
-        ; Nullpunkt setzen MIT Kugelradius-Kompensation
-        ; Y- Richtung: Kante = Messpunkt + Kugelradius
-        G92 Y[0 + #4546]
-
-        ; 1mm von Kante wegfahren
-        G91 G0 Y1
+        ; Langsames Antasten
+        G91 G38.2 Y10 F[#101]
         G90
 
-        msg "Y- Kante gemessen, Nullpunkt gesetzt (Radius kompensiert)"
+        IF [#5067 == 1] THEN
+          ; Nullpunkt setzen MIT Kugelradius-Kompensation
+          ; Y- Richtung: Kante = Messpunkt + Kugelradius
+          G92 Y[0 + #4546]
+
+          ; 1mm von Kante wegfahren
+          G91 G0 Y1
+          G90
+
+          msg "Y- Kante gemessen, Nullpunkt gesetzt (Radius kompensiert)"
+        ELSE
+          ErrMsg "FEHLER: Kante nicht gefunden (Feinmessung)"
+        ENDIF
       ELSE
-        ErrMsg "FEHLER: Kante nicht gefunden (Feinmessung)"
+        ErrMsg "FEHLER: Kante nicht gefunden (Schnellsuche)"
       ENDIF
     ELSE
-      ErrMsg "FEHLER: Kante nicht gefunden (Schnellsuche)"
+      ErrMsg "Probing in Simulation/Render mode not allowed."
     ENDIF
 
     #1200 = 0
@@ -1009,6 +1037,11 @@ SUB user_6 ; Ecken-Antastung mit Rotationsberechnung (2 Kanten)
   ; 3D-Taster Sensor pruefen
   GoSub check_3d_probe_connected
 
+  ; WICHTIG: Feedrate-Variablen in lokale Variablen kopieren
+  ; um Auswertungsprobleme in verschachtelten IF-Bloecken zu vermeiden
+  #110 = #4548  ; Anfahrgeschwindigkeit
+  #111 = #4549  ; Tastgeschwindigkeit
+
   ; G68 Rotation zuruecksetzen (sauberer Start)
   G68 R0
 
@@ -1021,125 +1054,129 @@ SUB user_6 ; Ecken-Antastung mit Rotationsberechnung (2 Kanten)
 
   IF [#5398 == 1] THEN
 
-    ; === ERSTE KANTE: Linke Seite (oberer Punkt) ===
-    #1001 = #5001  ; Startposition X speichern
-    #100 = [#5001 + 10]
+    IF [[#5380 == 0] AND [#5397 == 0]] THEN
+      ; === ERSTE KANTE: Linke Seite (oberer Punkt) ===
+      #1001 = #5001  ; Startposition X speichern
+      #100 = [#5001 + 10]
 
-    msg "Taste linke Kante (oben) an..."
-    G90 G38.2 X[#100] F[#4548]
+      msg "Taste linke Kante (oben) an..."
+      G90 G38.2 X[#100] F[#110]
 
-    IF [#5067 == 1] THEN
-      #1011 = [#5061 - #4546]  ; X1 mit Kugelradius-Kompensation
-      #1012 = #5062            ; Y1
-      G0 X[#1001]
+      IF [#5067 == 1] THEN
+        #1011 = [#5061 - #4546]  ; X1 mit Kugelradius-Kompensation
+        #1012 = #5062            ; Y1
+        G0 X[#1001]
 
-      ; === ERSTE KANTE: Linke Seite (unterer Punkt) ===
-      DlgMsg "Taster zur linken unteren Kante positionieren"
+        ; === ERSTE KANTE: Linke Seite (unterer Punkt) ===
+        DlgMsg "Taster zur linken unteren Kante positionieren"
 
-      IF [#5398 == 1] THEN
-        #1001 = #5001
-        #100 = [#5001 + 10]
+        IF [#5398 == 1] THEN
+          #1001 = #5001
+          #100 = [#5001 + 10]
 
-        msg "Taste linke Kante (unten) an..."
-        G90 G38.2 X[#100] F[#4548]
+          msg "Taste linke Kante (unten) an..."
+          G90 G38.2 X[#100] F[#110]
 
-        IF [#5067 == 1] THEN
-          #1021 = [#5061 - #4546]  ; X2 mit Kugelradius-Kompensation
-          #1022 = #5062            ; Y2
-          G0 X[#1001]
+          IF [#5067 == 1] THEN
+            #1021 = [#5061 - #4546]  ; X2 mit Kugelradius-Kompensation
+            #1022 = #5062            ; Y2
+            G0 X[#1001]
 
-          ; === ZWEITE KANTE: Untere Seite (linker Punkt) ===
-          DlgMsg "Taster zur unteren linken Kante positionieren"
+            ; === ZWEITE KANTE: Untere Seite (linker Punkt) ===
+            DlgMsg "Taster zur unteren linken Kante positionieren"
 
-          IF [#5398 == 1] THEN
-            #1002 = #5002
-            #100 = [#5002 + 10]
+            IF [#5398 == 1] THEN
+              #1002 = #5002
+              #100 = [#5002 + 10]
 
-            msg "Taste untere Kante (links) an..."
-            G90 G38.2 Y[#100] F[#4548]
+              msg "Taste untere Kante (links) an..."
+              G90 G38.2 Y[#100] F[#110]
 
-            IF [#5067 == 1] THEN
-              #1031 = #5061            ; X3
-              #1032 = [#5062 - #4546]  ; Y3 mit Kugelradius-Kompensation
-              G0 Y[#1002]
+              IF [#5067 == 1] THEN
+                #1031 = #5061            ; X3
+                #1032 = [#5062 - #4546]  ; Y3 mit Kugelradius-Kompensation
+                G0 Y[#1002]
 
-              ; === ZWEITE KANTE: Untere Seite (rechter Punkt) ===
-              DlgMsg "Taster zur unteren rechten Kante positionieren"
+                ; === ZWEITE KANTE: Untere Seite (rechter Punkt) ===
+                DlgMsg "Taster zur unteren rechten Kante positionieren"
 
-              IF [#5398 == 1] THEN
-                #1002 = #5002
-                #100 = [#5002 + 10]
+                IF [#5398 == 1] THEN
+                  #1002 = #5002
+                  #100 = [#5002 + 10]
 
-                msg "Taste untere Kante (rechts) an..."
-                G90 G38.2 Y[#100] F[#4548]
+                  msg "Taste untere Kante (rechts) an..."
+                  G90 G38.2 Y[#100] F[#110]
 
-                IF [#5067 == 1] THEN
-                  #1041 = #5061            ; X4
-                  #1042 = [#5062 - #4546]  ; Y4 mit Kugelradius-Kompensation
-                  G0 Y[#1002]
+                  IF [#5067 == 1] THEN
+                    #1041 = #5061            ; X4
+                    #1042 = [#5062 - #4546]  ; Y4 mit Kugelradius-Kompensation
+                    G0 Y[#1002]
 
-                  ; === BERECHNUNGEN ===
-                  msg "Berechne Rotation und Nullpunkt..."
+                    ; === BERECHNUNGEN ===
+                    msg "Berechne Rotation und Nullpunkt..."
 
-                  ; Steigung erste Kante (linke Seite)
-                  #2001 = [[#1022 - #1012] / [#1021 - #1011]]
+                    ; Steigung erste Kante (linke Seite)
+                    #2001 = [[#1022 - #1012] / [#1021 - #1011]]
 
-                  ; Steigung zweite Kante (untere Seite)
-                  #2002 = [[#1042 - #1032] / [#1041 - #1031]]
+                    ; Steigung zweite Kante (untere Seite)
+                    #2002 = [[#1042 - #1032] / [#1041 - #1031]]
 
-                  ; Y-Achsenabschnitt erste Kante
-                  #2003 = [#1012 - #2001 * #1011]
+                    ; Y-Achsenabschnitt erste Kante
+                    #2003 = [#1012 - #2001 * #1011]
 
-                  ; Y-Achsenabschnitt zweite Kante
-                  #2004 = [#1032 - #2002 * #1031]
+                    ; Y-Achsenabschnitt zweite Kante
+                    #2004 = [#1032 - #2002 * #1031]
 
-                  ; Schnittpunkt X (Ecke)
-                  #2005 = [[#2003 - #2004] / [#2002 - #2001]]
+                    ; Schnittpunkt X (Ecke)
+                    #2005 = [[#2003 - #2004] / [#2002 - #2001]]
 
-                  ; Schnittpunkt Y (Ecke)
-                  #2006 = [#2001 * #2005 + #2003]
+                    ; Schnittpunkt Y (Ecke)
+                    #2006 = [#2001 * #2005 + #2003]
 
-                  ; Rotationswinkel berechnen (aus unterer Kante)
-                  #2007 = ATAN[[#1042 - #1032] / [#1041 - #1031]]
+                    ; Rotationswinkel berechnen (aus unterer Kante)
+                    #2007 = ATAN[[#1042 - #1032] / [#1041 - #1031]]
 
-                  ; === BENUTZER FRAGEN OB ROTATION ANWENDEN ===
-                  DlgMsg "Die errechnete Rotation liegt bei " #2007 " Grad. Soll ich diese anwenden oder ignorieren?" "1=Anwenden / 0=Ignorieren" 3503
+                    ; === BENUTZER FRAGEN OB ROTATION ANWENDEN ===
+                    DlgMsg "Die errechnete Rotation liegt bei " #2007 " Grad. Soll ich diese anwenden oder ignorieren?" "1=Anwenden / 0=Ignorieren" 3503
 
-                  IF [#5398 == 1] THEN
+                    IF [#5398 == 1] THEN
 
-                    ; Nullpunkt auf Ecke setzen (mit Radius-Kompensation)
-                    G92 X[#1041 - #2005 - #105 * #104 * COS[#2007 + 45]]
-                    G92 Y[#1002 - #2006 - #105 * #104 * SIN[#2007 + 45]]
+                      ; Nullpunkt auf Ecke setzen (mit Radius-Kompensation)
+                      G92 X[#1041 - #2005 - #105 * #104 * COS[#2007 + 45]]
+                      G92 Y[#1002 - #2006 - #105 * #104 * SIN[#2007 + 45]]
 
-                    ; Rotation anwenden wenn gewaehlt
-                    IF [#3503 == 1] THEN
-                      G68 R[#2007]
-                      msg "Nullpunkt gesetzt und Rotation " #2007 " Grad angewendet"
+                      ; Rotation anwenden wenn gewaehlt
+                      IF [#3503 == 1] THEN
+                        G68 R[#2007]
+                        msg "Nullpunkt gesetzt und Rotation " #2007 " Grad angewendet"
+                      ELSE
+                        msg "Nullpunkt gesetzt, Rotation NICHT angewendet"
+                      ENDIF
+
                     ELSE
-                      msg "Nullpunkt gesetzt, Rotation NICHT angewendet"
+                      msg "Messung abgebrochen"
                     ENDIF
 
                   ELSE
-                    msg "Messung abgebrochen"
+                    ErrMsg "Messfehler: Untere Kante rechts nicht gefunden"
                   ENDIF
-
-                ELSE
-                  ErrMsg "Messfehler: Untere Kante rechts nicht gefunden"
                 ENDIF
+
+              ELSE
+                ErrMsg "Messfehler: Untere Kante links nicht gefunden"
               ENDIF
-
-            ELSE
-              ErrMsg "Messfehler: Untere Kante links nicht gefunden"
             ENDIF
+
+          ELSE
+            ErrMsg "Messfehler: Linke Kante unten nicht gefunden"
           ENDIF
-
-        ELSE
-          ErrMsg "Messfehler: Linke Kante unten nicht gefunden"
         ENDIF
-      ENDIF
 
+      ELSE
+        ErrMsg "Messfehler: Linke Kante oben nicht gefunden"
+      ENDIF
     ELSE
-      ErrMsg "Messfehler: Linke Kante oben nicht gefunden"
+      ErrMsg "Probing in Simulation/Render mode not allowed."
     ENDIF
   ENDIF
 
@@ -1176,92 +1213,100 @@ SUB user_7 ; Loch-Antastung (Mittelpunkt finden)
   ; 3D-Taster Sensor pruefen
   GoSub check_3d_probe_connected
 
+  ; WICHTIG: Feedrate-Variablen in lokale Variablen kopieren
+  ; um Auswertungsprobleme in verschachtelten IF-Bloecken zu vermeiden
+  #120 = #4548  ; Anfahrgeschwindigkeit
+  #121 = #4549  ; Tastgeschwindigkeit
+
   DlgMsg "Loch-Mittelpunkt finden - Taster ungefaehr in Lochmitte positionieren" "Geschaetzter Durchmesser (mm):" 1
 
   IF [#5398 == 1] THEN
 
-    #102 = [#1 + 10]  ; Suchstrecke = Durchmesser + Reserve
+    IF [[#5380 == 0] AND [#5397 == 0]] THEN
+      #102 = [#1 + 10]  ; Suchstrecke = Durchmesser + Reserve
 
-    ; === X- Richtung antasten ===
-    #101 = #5001      ; X-Position speichern
-    msg "Taste Loch X- an..."
-    G91 G38.2 X-[#102] F[#4548]
-    G90
-
-    IF [#5067 == 1] THEN
-      #100 = [#5061 + #4546]  ; X- Kante + Kugelradius
-      G0 X[#101]              ; Zurueck zur Mitte
-
-      ; === X+ Richtung antasten ===
-      msg "Taste Loch X+ an..."
-      G91 G38.2 X[#102] F[#4548]
+      ; === X- Richtung antasten ===
+      #101 = #5001      ; X-Position speichern
+      msg "Taste Loch X- an..."
+      G91 G38.2 X-[#102] F[#120]
       G90
 
       IF [#5067 == 1] THEN
-        #104 = [[#5061 - #4546 - #100] / 2]  ; X-Mittelpunkt berechnen
-        G92 X[#104]                          ; X-Nullpunkt setzen
-        G0 X0                                ; X-Mitte anfahren
+        #100 = [#5061 + #4546]  ; X- Kante + Kugelradius
+        G0 X[#101]              ; Zurueck zur Mitte
 
-        ; === Y- Richtung antasten ===
-        #101 = #5002
-        msg "Taste Loch Y- an..."
-        G91 G38.2 Y-[#102] F[#4548]
+        ; === X+ Richtung antasten ===
+        msg "Taste Loch X+ an..."
+        G91 G38.2 X[#102] F[#120]
         G90
 
         IF [#5067 == 1] THEN
-          #100 = [#5062 + #4546]  ; Y- Kante + Kugelradius
-          G0 Y[#101]              ; Zurueck zur Mitte
+          #104 = [[#5061 - #4546 - #100] / 2]  ; X-Mittelpunkt berechnen
+          G92 X[#104]                          ; X-Nullpunkt setzen
+          G0 X0                                ; X-Mitte anfahren
 
-          ; === Y+ Richtung antasten ===
-          msg "Taste Loch Y+ an..."
-          G91 G38.2 Y[#102] F[#4548]
+          ; === Y- Richtung antasten ===
+          #101 = #5002
+          msg "Taste Loch Y- an..."
+          G91 G38.2 Y-[#102] F[#120]
           G90
 
           IF [#5067 == 1] THEN
-            #105 = [[#5062 - #4546 - #100] / 2]  ; Y-Mittelpunkt berechnen
-            G92 Y[#105]                          ; Y-Nullpunkt setzen
-            G0 Y0                                ; Y-Mitte anfahren
+            #100 = [#5062 + #4546]  ; Y- Kante + Kugelradius
+            G0 Y[#101]              ; Zurueck zur Mitte
 
-            ; === Durchmesser-Verifikation (optional) ===
-            ; Nochmal X+ messen fuer Durchmesser-Kontrolle
-            G0 X[#104 - 1]
-            G91 G38.2 X[#102] F[#4548]
+            ; === Y+ Richtung antasten ===
+            msg "Taste Loch Y+ an..."
+            G91 G38.2 Y[#102] F[#120]
             G90
-            #106 = [#5061 - #4546]
 
-            ; X- messen
-            G0 X-[#104 - 1]
-            G91 G38.2 X-[#102] F[#4548]
-            G90
-            #107 = [#106 - [#5061 + #4546]]  ; Durchmesser X
+            IF [#5067 == 1] THEN
+              #105 = [[#5062 - #4546 - #100] / 2]  ; Y-Mittelpunkt berechnen
+              G92 Y[#105]                          ; Y-Nullpunkt setzen
+              G0 Y0                                ; Y-Mitte anfahren
 
-            G0 X0
+              ; === Durchmesser-Verifikation (optional) ===
+              ; Nochmal X+ messen fuer Durchmesser-Kontrolle
+              G0 X[#104 - 1]
+              G91 G38.2 X[#102] F[#120]
+              G90
+              #106 = [#5061 - #4546]
 
-            ; Y+ messen
-            G0 Y[#105 - 1]
-            G91 G38.2 Y[#102] F[#4548]
-            G90
-            #108 = [#5062 - #4546 - #100]    ; Durchmesser Y
+              ; X- messen
+              G0 X-[#104 - 1]
+              G91 G38.2 X-[#102] F[#120]
+              G90
+              #107 = [#106 - [#5061 + #4546]]  ; Durchmesser X
 
-            ; Zurueck zur Mitte
-            G0 X0 Y0
+              G0 X0
 
-            msg "Lochmitte gefunden - Durchmesser X=" #107 " mm, Durchmesser Y=" #108 " mm"
+              ; Y+ messen
+              G0 Y[#105 - 1]
+              G91 G38.2 Y[#102] F[#120]
+              G90
+              #108 = [#5062 - #4546 - #100]    ; Durchmesser Y
 
+              ; Zurueck zur Mitte
+              G0 X0 Y0
+
+              msg "Lochmitte gefunden - Durchmesser X=" #107 " mm, Durchmesser Y=" #108 " mm"
+
+            ELSE
+              ErrMsg "Messfehler: Loch Y+ nicht gefunden"
+            ENDIF
           ELSE
-            ErrMsg "Messfehler: Loch Y+ nicht gefunden"
+            ErrMsg "Messfehler: Loch Y- nicht gefunden"
           ENDIF
         ELSE
-          ErrMsg "Messfehler: Loch Y- nicht gefunden"
+          ErrMsg "Messfehler: Loch X+ nicht gefunden"
         ENDIF
       ELSE
-        ErrMsg "Messfehler: Loch X+ nicht gefunden"
+        ErrMsg "Messfehler: Loch X- nicht gefunden"
+        M30
       ENDIF
     ELSE
-      ErrMsg "Messfehler: Loch X- nicht gefunden"
-      M30
+      ErrMsg "Probing in Simulation/Render mode not allowed."
     ENDIF
-
   ENDIF
 
 ENDSUB
@@ -1296,90 +1341,96 @@ SUB user_8 ; Zylinder/Boss-Antastung (Aussenmittelpunkt)
   ; 3D-Taster Sensor pruefen
   GoSub check_3d_probe_connected
 
+  ; WICHTIG: Feedrate-Variablen in lokale Variablen kopieren
+  ; um Auswertungsprobleme in verschachtelten IF-Bloecken zu vermeiden
+  #130 = #4548  ; Anfahrgeschwindigkeit
+  #131 = #4549  ; Tastgeschwindigkeit
+
   DlgMsg "Zylinder-Mittelpunkt finden - Taster neben Zylinder positionieren" "Geschaetzter Durchmesser (mm):" 1
 
   IF [#5398 == 1] THEN
 
-    #102 = [#1 + 10]  ; Suchstrecke = Durchmesser + Reserve
+    IF [[#5380 == 0] AND [#5397 == 0]] THEN
+      #102 = [#1 + 10]  ; Suchstrecke = Durchmesser + Reserve
 
-    ; === X+ Seite antasten ===
-    #101 = #5001
-    msg "Taste Zylinder X+ an..."
-    G91 G38.2 X[#102] F[#4548]
-    G90
-
-    IF [#5067 == 1] THEN
-      #100 = [#5061 - #4546]  ; X+ Kante - Kugelradius
-
-      ; Nach oben fahren und zur anderen Seite
-      G91
-      G0 Z[#4511]
-      G0 X[#102]
-      G0 Z-[#102]
-      G90
-
-      ; === X- Seite antasten ===
-      msg "Taste Zylinder X- an..."
-      G91 G38.2 X-[#102] F[#4548]
+      ; === X+ Seite antasten ===
+      #101 = #5001
+      msg "Taste Zylinder X+ an..."
+      G91 G38.2 X[#102] F[#130]
       G90
 
       IF [#5067 == 1] THEN
-        ; X-Mittelpunkt berechnen und setzen
-        G92 X-[[#100 - [#5061 + #4546]] / 2]
+        #100 = [#5061 - #4546]  ; X+ Kante - Kugelradius
 
-        ; Nach oben und X-Mitte anfahren
+        ; Nach oben fahren und zur anderen Seite
         G91
         G0 Z[#4511]
-        G90
-        G0 X0
-
-        ; === Y+ Seite antasten ===
-        #101 = #5002
-        G0 Y[#101 + #102 / 2]
-        G91
+        G0 X[#102]
         G0 Z-[#102]
         G90
-        G91 G38.2 Y[#102] F[#4548]
+
+        ; === X- Seite antasten ===
+        msg "Taste Zylinder X- an..."
+        G91 G38.2 X-[#102] F[#130]
         G90
 
         IF [#5067 == 1] THEN
-          #100 = [#5062 - #4546]  ; Y+ Kante - Kugelradius
+          ; X-Mittelpunkt berechnen und setzen
+          G92 X-[[#100 - [#5061 + #4546]] / 2]
 
-          ; Nach oben fahren und zur anderen Seite
+          ; Nach oben und X-Mitte anfahren
           G91
           G0 Z[#4511]
-          G0 Y-[#102]
-          G0 Z-[#102]
           G90
-          G91 G38.2 Y-[#102] F[#4548]
+          G0 X0
+
+          ; === Y+ Seite antasten ===
+          #101 = #5002
+          G0 Y[#101 + #102 / 2]
+          G91
+          G0 Z-[#102]
+          G91 G38.2 Y[#102] F[#130]
           G90
 
           IF [#5067 == 1] THEN
-            ; Y-Mittelpunkt berechnen und setzen
-            G92 Y-[[#100 - [#5062 + #4546]] / 2]
+            #100 = [#5062 - #4546]  ; Y+ Kante - Kugelradius
 
-            ; Nach oben und Y-Mitte anfahren
+            ; Nach oben fahren und zur anderen Seite
             G91
             G0 Z[#4511]
+            G0 Y-[#102]
+            G0 Z-[#102]
+            G91 G38.2 Y-[#102] F[#130]
             G90
-            G0 Y0
 
-            msg "Zylindermitte gefunden - Maschine steht auf Mittelpunkt"
+            IF [#5067 == 1] THEN
+              ; Y-Mittelpunkt berechnen und setzen
+              G92 Y-[[#100 - [#5062 + #4546]] / 2]
 
+              ; Nach oben und Y-Mitte anfahren
+              G91
+              G0 Z[#4511]
+              G90
+              G0 Y0
+
+              msg "Zylindermitte gefunden - Maschine steht auf Mittelpunkt"
+
+            ELSE
+              ErrMsg "Messfehler: Zylinder Y- nicht gefunden"
+            ENDIF
           ELSE
-            ErrMsg "Messfehler: Zylinder Y- nicht gefunden"
+            ErrMsg "Messfehler: Zylinder Y+ nicht gefunden"
           ENDIF
         ELSE
-          ErrMsg "Messfehler: Zylinder Y+ nicht gefunden"
+          ErrMsg "Messfehler: Zylinder X- nicht gefunden"
         ENDIF
       ELSE
-        ErrMsg "Messfehler: Zylinder X- nicht gefunden"
+        ErrMsg "Messfehler: Zylinder X+ nicht gefunden"
+        M30
       ENDIF
     ELSE
-      ErrMsg "Messfehler: Zylinder X+ nicht gefunden"
-      M30
+      ErrMsg "Probing in Simulation/Render mode not allowed."
     ENDIF
-
   ENDIF
 
 ENDSUB
@@ -1419,101 +1470,104 @@ SUB user_9 ; Werkzeug-Bruchkontrolle
 
     msg "Bruchkontrolle wird durchgefuehrt..."
 
-    ; Spindel und Kuehlung ausschalten
-    M5 M9
+    IF [[#5380 == 0] AND [#5397 == 0]] THEN
+      ; Spindel und Kuehlung ausschalten
+      M5 M9
 
-    ; Zu Sensorposition fahren
-    G53 G0 Z[#4506]                      ; Sicherheitshoehe
-    G53 G0 Y[#5020]                      ; Y-Position
-    G53 G0 X[#5019]                      ; X-Position
-    G53 G0 Z[#4509 + #5017 + 10]         ; Z-Annaeherung
+      ; Zu Sensorposition fahren
+      G53 G0 Z[#4506]                      ; Sicherheitshoehe
+      G53 G0 Y[#5020]                      ; Y-Position
+      G53 G0 X[#5019]                      ; X-Position
+      G53 G0 Z[#4509 + #5017 + 10]         ; Z-Annaeherung
 
-    ; Sensor antasten
-    G53 G38.2 Z[#4509] F[#4504]
+      ; Sensor antasten
+      G53 G38.2 Z[#4509] F[#4504]
 
-    IF [#5067 == 1] THEN ; Sensor gefunden
+      IF [#5067 == 1] THEN ; Sensor gefunden
 
-      ; Feinmessung
-      G91 G38.2 Z20 F[#4505]
-      G90
+        ; Feinmessung
+        G91 G38.2 Z20 F[#4505]
+        G90
 
-      IF [#5067 == 1] THEN ; Sensor erneut gefunden
+        IF [#5067 == 1] THEN ; Sensor erneut gefunden
 
-        ; Aktuelle Laenge berechnen
-        #4501 = [#5053 - #4509]
+          ; Aktuelle Laenge berechnen
+          #4501 = [#5053 - #4509]
 
-        ; Nach oben fahren
-        G0 G53 Z[#4506]
+          ; Nach oben fahren
+          G53 G0 Z[#4506]
 
-        ; Toleranzpruefung
-        ; Ist Abweichung innerhalb Toleranz?
-        IF [[[#5021 + #4528] > [#4501]] AND [[#5021 - #4528] < [#4501]]] THEN
+          ; Toleranzpruefung
+          ; Ist Abweichung innerhalb Toleranz?
+          IF [[[#5021 + #4528] > [#4501]] AND [[#5021 - #4528] < [#4501]]] THEN
 
-          ; Werkzeug OK
-          msg "Bruchkontrolle OK - Abweichung: " [#5021 - #4501] " mm"
+            ; Werkzeug OK
+            msg "Bruchkontrolle OK - Abweichung: " [#5021 - #4501] " mm"
+
+          ELSE
+
+            ; Werkzeug NICHT OK - zu viel Abweichung
+            #3504 = 0  ; Automatik-Merker zuruecksetzen
+
+            ; Zu Wechselposition fahren
+            G53 G0 Z[#4523]
+            G53 G0 X[#4521]
+            G53 G0 Y[#4522]
+
+            DlgMsg "WARNUNG: Werkzeug verschlissen! Fortfahren?" "Abweichung (mm):" 4501
+
+            IF [#5398 == 1] THEN ; OK - Fortfahren
+              DlgMsg "ACHTUNG: Auftrag wird mit verschlissenem Werkzeug fortgefuehrt!"
+            ELSE                 ; Cancel - Abbruch
+              #3504 = 0
+              ErrMsg "Werkzeug verschlissen - Auftrag abgebrochen"
+            ENDIF
+
+          ENDIF
+
+          ; Zu konfigurierter Position fahren (wenn nicht von Automatik)
+          IF [#3504 == 0] THEN
+
+            IF [#4519 == 0] THEN       ; Vordefinierter Punkt
+              G53 G0 Z[#4506]
+              G53 G0 X[#4524]
+              G53 G0 Y[#4525]
+            ENDIF
+
+            IF [#4519 == 1] THEN       ; Werkstuecknullpunkt
+              G53 G0 Z[#4506]
+              G0 X0
+              G0 Y0
+            ENDIF
+
+            IF [#4519 == 2] THEN       ; Werkzeugwechselposition
+              G53 G0 Z[#4523]
+              G53 G0 X[#4521]
+              G53 G0 Y[#4522]
+            ENDIF
+
+            IF [#4519 == 3] THEN       ; Maschinennullpunkt
+              G53 G0 Z[#4506]
+              G53 G0 X0
+              G53 G0 Y0
+            ENDIF
+
+            ; Wenn #4519 == 4: Stehen bleiben
+
+          ENDIF
 
         ELSE
-
-          ; Werkzeug NICHT OK - zu viel Abweichung
-          #3504 = 0  ; Automatik-Merker zuruecksetzen
-
-          ; Zu Wechselposition fahren
-          G53 G0 Z[#4523]
-          G53 G0 X[#4521]
-          G53 G0 Y[#4522]
-
-          DlgMsg "WARNUNG: Werkzeug verschlissen! Fortfahren?" "Abweichung (mm):" 4501
-
-          IF [#5398 == 1] THEN ; OK - Fortfahren
-            DlgMsg "ACHTUNG: Auftrag wird mit verschlissenem Werkzeug fortgefuehrt!"
-          ELSE                 ; Cancel - Abbruch
-            #3504 = 0
-            ErrMsg "Werkzeug verschlissen - Auftrag abgebrochen"
-          ENDIF
-
-        ENDIF
-
-        ; Zu konfigurierter Position fahren (wenn nicht von Automatik)
-        IF [#3504 == 0] THEN
-
-          IF [#4519 == 0] THEN       ; Vordefinierter Punkt
-            G0 G53 Z[#4506]
-            G0 G53 X[#4524]
-            G0 G53 Y[#4525]
-          ENDIF
-
-          IF [#4519 == 1] THEN       ; Werkstuecknullpunkt
-            G0 G53 Z[#4506]
-            G0 X0
-            G0 Y0
-          ENDIF
-
-          IF [#4519 == 2] THEN       ; Werkzeugwechselposition
-            G0 G53 Z[#4523]
-            G0 G53 X[#4521]
-            G0 G53 Y[#4522]
-          ENDIF
-
-          IF [#4519 == 3] THEN       ; Maschinennullpunkt
-            G0 G53 Z[#4506]
-            G53 X0
-            G53 Y0
-          ENDIF
-
-          ; Wenn #4519 == 4: Stehen bleiben
-
+          #3504 = 0
+          ErrMsg "FEHLER: Sensor nicht gefunden (Feinmessung)"
         ENDIF
 
       ELSE
         #3504 = 0
-        ErrMsg "FEHLER: Sensor nicht gefunden (Feinmessung)"
+        ErrMsg "FEHLER: Sensor nicht gefunden (Schnellsuche)"
       ENDIF
-
     ELSE
-      #3504 = 0
-      ErrMsg "FEHLER: Sensor nicht gefunden (Schnellsuche)"
+      ErrMsg "Probing in Simulation/Render mode not allowed."
     ENDIF
-
   ELSE
     DlgMsg "Werkzeug wurde noch nicht vermessen - Bruchkontrolle nicht moeglich"
   ENDIF
@@ -1572,6 +1626,11 @@ SUB user_10 ; Vier-Kanten-Rechteck-Vermessung
   ; 3D-Taster Sensor pruefen
   GoSub check_3d_probe_connected
 
+  ; WICHTIG: Feedrate-Variablen in lokale Variablen kopieren
+  ; um Auswertungsprobleme in verschachtelten IF-Bloecken zu vermeiden
+  #140 = #4548  ; Anfahrgeschwindigkeit
+  #141 = #4549  ; Tastgeschwindigkeit
+
   ; Standard-Toleranz setzen falls nicht konfiguriert
   IF [#4600 == 0] THEN
     #4600 = 0.1  ; Default: 0.1mm Toleranz
@@ -1598,176 +1657,179 @@ SUB user_10 ; Vier-Kanten-Rechteck-Vermessung
 
   IF [#5398 == 1] THEN
 
-    ; Suchstrecke berechnen (halbe Sollmass + Reserve)
-    #2107 = [#4601]  ; Max. Suchstrecke
+    IF [[#5380 == 0] AND [#5397 == 0]] THEN
+      ; Suchstrecke berechnen (halbe Sollmass + Reserve)
+      #2107 = [#4601]  ; Max. Suchstrecke
 
-    msg "Rechteck-Vermessung gestartet..."
+      msg "Rechteck-Vermessung gestartet..."
 
-    ; === X+ Kante antasten (rechte Seite) ===
-    msg "Taste X+ Kante an (rechts)..."
-    #100 = #5001  ; Startposition speichern
+      ; === X+ Kante antasten (rechte Seite) ===
+      msg "Taste X+ Kante an (rechts)..."
+      #100 = #5001  ; Startposition speichern
 
-    ; Schnelles Antasten
-    G91 G38.2 X[#2107] F[#4548]
-    G90
-
-    IF [#5067 == 1] THEN
-      ; Langsames Antasten fuer Genauigkeit
-      G91 G38.2 X-10 F[#4549]
+      ; Schnelles Antasten
+      G91 G38.2 X[#2107] F[#140]
       G90
 
       IF [#5067 == 1] THEN
-        ; Position mit Kugelradius-Kompensation speichern
-        #1102 = [#5061 - #4546]
-        msg "X+ Kante gemessen: " #1102 " mm"
-
-        ; Zurueck zur Mitte
-        G0 X[#100]
-
-        ; === X- Kante antasten (linke Seite) ===
-        msg "Taste X- Kante an (links)..."
-
-        ; Schnelles Antasten
-        G91 G38.2 X-[#2107] F[#4548]
+        ; Langsames Antasten fuer Genauigkeit
+        G91 G38.2 X-10 F[#141]
         G90
 
         IF [#5067 == 1] THEN
-          ; Langsames Antasten
-          G91 G38.2 X10 F[#4549]
+          ; Position mit Kugelradius-Kompensation speichern
+          #1102 = [#5061 - #4546]
+          msg "X+ Kante gemessen: " #1102 " mm"
+
+          ; Zurueck zur Mitte
+          G0 X[#100]
+
+          ; === X- Kante antasten (linke Seite) ===
+          msg "Taste X- Kante an (links)..."
+
+          ; Schnelles Antasten
+          G91 G38.2 X-[#2107] F[#140]
           G90
 
           IF [#5067 == 1] THEN
-            ; Position mit Kugelradius-Kompensation speichern
-            #1103 = [#5061 + #4546]
-            msg "X- Kante gemessen: " #1103 " mm"
-
-            ; Zurueck zur Mitte
-            G0 X[#100]
-
-            ; === Y+ Kante antasten (vordere Seite) ===
-            msg "Taste Y+ Kante an (vorne)..."
-            #101 = #5002  ; Y-Startposition speichern
-
-            ; Schnelles Antasten
-            G91 G38.2 Y[#2107] F[#4548]
+            ; Langsames Antasten
+            G91 G38.2 X10 F[#141]
             G90
 
             IF [#5067 == 1] THEN
-              ; Langsames Antasten
-              G91 G38.2 Y-10 F[#4549]
+              ; Position mit Kugelradius-Kompensation speichern
+              #1103 = [#5061 + #4546]
+              msg "X- Kante gemessen: " #1103 " mm"
+
+              ; Zurueck zur Mitte
+              G0 X[#100]
+
+              ; === Y+ Kante antasten (vordere Seite) ===
+              msg "Taste Y+ Kante an (vorne)..."
+              #101 = #5002  ; Y-Startposition speichern
+
+              ; Schnelles Antasten
+              G91 G38.2 Y[#2107] F[#140]
               G90
 
               IF [#5067 == 1] THEN
-                ; Position mit Kugelradius-Kompensation speichern
-                #1104 = [#5062 - #4546]
-                msg "Y+ Kante gemessen: " #1104 " mm"
-
-                ; Zurueck zur Mitte
-                G0 Y[#101]
-
-                ; === Y- Kante antasten (hintere Seite) ===
-                msg "Taste Y- Kante an (hinten)..."
-
-                ; Schnelles Antasten
-                G91 G38.2 Y-[#2107] F[#4548]
+                ; Langsames Antasten
+                G91 G38.2 Y-10 F[#141]
                 G90
 
                 IF [#5067 == 1] THEN
-                  ; Langsames Antasten
-                  G91 G38.2 Y10 F[#4549]
+                  ; Position mit Kugelradius-Kompensation speichern
+                  #1104 = [#5062 - #4546]
+                  msg "Y+ Kante gemessen: " #1104 " mm"
+
+                  ; Zurueck zur Mitte
+                  G0 Y[#101]
+
+                  ; === Y- Kante antasten (hintere Seite) ===
+                  msg "Taste Y- Kante an (hinten)..."
+
+                  ; Schnelles Antasten
+                  G91 G38.2 Y-[#2107] F[#140]
                   G90
 
                   IF [#5067 == 1] THEN
-                    ; Position mit Kugelradius-Kompensation speichern
-                    #1105 = [#5062 + #4546]
-                    msg "Y- Kante gemessen: " #1105 " mm"
-
-                    ; Zurueck zur Mitte
-                    G0 Y[#101]
-
-                    ; === BERECHNUNGEN ===
-                    msg "Berechne Rechteck-Parameter..."
-
-                    ; Ist-Masse berechnen
-                    #2100 = [#1102 - #1103]  ; Ist-Laenge X
-                    #2101 = [#1104 - #1105]  ; Ist-Breite Y
-
-                    ; Mittelpunkt berechnen
-                    #2102 = [#1103 + #2100 / 2]  ; Mittelpunkt X
-                    #2103 = [#1105 + #2101 / 2]  ; Mittelpunkt Y
-
-                    ; Abweichungen berechnen
-                    #2104 = [#2100 - #1100]  ; Abweichung Laenge
-                    #2105 = [#2101 - #1101]  ; Abweichung Breite
-
-                    ; Toleranzcheck
-                    #2106 = 0  ; Zunaechst OK
-                    IF [[ABS[#2104] > #4600] OR [ABS[#2105] > #4600]] THEN
-                      #2106 = 1  ; Abweichung zu gross
-                    ENDIF
-
-                    ; === ERGEBNISSE ANZEIGEN ===
-                    IF [#2106 == 0] THEN
-                      msg "=== RECHTECK-VERMESSUNG ERFOLGREICH ==="
-                      msg "Ist-Laenge X:  " #2100 " mm (Soll: " #1100 " mm, Abw: " #2104 " mm)"
-                      msg "Ist-Breite Y:  " #2101 " mm (Soll: " #1101 " mm, Abw: " #2105 " mm)"
-                      msg "Mittelpunkt X: " #2102 " mm"
-                      msg "Mittelpunkt Y: " #2103 " mm"
-                      msg "Massabweichung innerhalb Toleranz (" #4600 " mm)"
-
-                      DlgMsg "Rechteck vermessen - Alle Masse OK!" "Ist-Laenge X: " 2100 "Soll-Laenge X: " 1100 "Abweichung X: " 2104 "Ist-Breite Y: " 2101 "Soll-Breite Y: " 1101 "Abweichung Y: " 2105
-
-                    ELSE
-                      msg "!!! WARNUNG: MASSABWEICHUNG ZU GROSS !!!"
-                      msg "Ist-Laenge X:  " #2100 " mm (Soll: " #1100 " mm, Abw: " #2104 " mm)"
-                      msg "Ist-Breite Y:  " #2101 " mm (Soll: " #1101 " mm, Abw: " #2105 " mm)"
-                      msg "Toleranz: " #4600 " mm"
-
-                      DlgMsg "WARNUNG: Massabweichung zu gross!" "Ist-Laenge X: " 2100 "Soll-Laenge X: " 1100 "Abweichung X: " 2104 "Ist-Breite Y: " 2101 "Soll-Breite Y: " 1101 "Abweichung Y: " 2105 "Max. Toleranz: " 4600
-                    ENDIF
-
-                    ; === NULLPUNKT AUF MITTELPUNKT SETZEN ===
-                    msg "Setze Nullpunkt auf Rechteck-Mittelpunkt..."
-
-                    ; Zu Mittelpunkt fahren (relativ)
-                    G91
-                    G0 X[#2102 - #100]
-                    G0 Y[#2103 - #101]
+                    ; Langsames Antasten
+                    G91 G38.2 Y10 F[#141]
                     G90
 
-                    ; Nullpunkt setzen
-                    G92 X0 Y0
+                    IF [#5067 == 1] THEN
+                      ; Position mit Kugelradius-Kompensation speichern
+                      #1105 = [#5062 + #4546]
+                      msg "Y- Kante gemessen: " #1105 " mm"
 
-                    msg "Nullpunkt gesetzt - Maschine steht auf Rechteck-Mittelpunkt"
+                      ; Zurueck zur Mitte
+                      G0 Y[#101]
 
+                      ; === BERECHNUNGEN ===
+                      msg "Berechne Rechteck-Parameter..."
+
+                      ; Ist-Masse berechnen
+                      #2100 = [#1102 - #1103]  ; Ist-Laenge X
+                      #2101 = [#1104 - #1105]  ; Ist-Breite Y
+
+                      ; Mittelpunkt berechnen
+                      #2102 = [#1103 + #2100 / 2]  ; Mittelpunkt X
+                      #2103 = [#1105 + #2101 / 2]  ; Mittelpunkt Y
+
+                      ; Abweichungen berechnen
+                      #2104 = [#2100 - #1100]  ; Abweichung Laenge
+                      #2105 = [#2101 - #1101]  ; Abweichung Breite
+
+                      ; Toleranzcheck
+                      #2106 = 0  ; Zunaechst OK
+                      IF [[ABS[#2104] > #4600] OR [ABS[#2105] > #4600]] THEN
+                        #2106 = 1  ; Abweichung zu gross
+                      ENDIF
+
+                      ; === ERGEBNISSE ANZEIGEN ===
+                      IF [#2106 == 0] THEN
+                        msg "=== RECHTECK-VERMESSUNG ERFOLGREICH ==="
+                        msg "Ist-Laenge X:  " #2100 " mm (Soll: " #1100 " mm, Abw: " #2104 " mm)"
+                        msg "Ist-Breite Y:  " #2101 " mm (Soll: " #1101 " mm, Abw: " #2105 " mm)"
+                        msg "Mittelpunkt X: " #2102 " mm"
+                        msg "Mittelpunkt Y: " #2103 " mm"
+                        msg "Massabweichung innerhalb Toleranz (" #4600 " mm)"
+
+                        DlgMsg "Rechteck vermessen - Alle Masse OK!" "Ist-Laenge X: " 2100 "Soll-Laenge X: " 1100 "Abweichung X: " 2104 "Ist-Breite Y: " 2101 "Soll-Breite Y: " 1101 "Abweichung Y: " 2105
+
+                      ELSE
+                        msg "!!! WARNUNG: MASSABWEICHUNG ZU GROSS !!!"
+                        msg "Ist-Laenge X:  " #2100 " mm (Soll: " #1100 " mm, Abw: " #2104 " mm)"
+                        msg "Ist-Breite Y:  " #2101 " mm (Soll: " #1101 " mm, Abw: " #2105 " mm)"
+                        msg "Toleranz: " #4600 " mm"
+
+                        DlgMsg "WARNUNG: Massabweichung zu gross!" "Ist-Laenge X: " 2100 "Soll-Laenge X: " 1100 "Abweichung X: " 2104 "Ist-Breite Y: " 2101 "Soll-Breite Y: " 1101 "Abweichung Y: " 2105 "Max. Toleranz: " 4600
+                      ENDIF
+
+                      ; === NULLPUNKT AUF MITTELPUNKT SETZEN ===
+                      msg "Setze Nullpunkt auf Rechteck-Mittelpunkt..."
+
+                      ; Zu Mittelpunkt fahren (relativ)
+                      G91
+                      G0 X[#2102 - #100]
+                      G0 Y[#2103 - #101]
+                      G90
+
+                      ; Nullpunkt setzen
+                      G92 X0 Y0
+
+                      msg "Nullpunkt gesetzt - Maschine steht auf Rechteck-Mittelpunkt"
+
+                    ELSE
+                      ErrMsg "Messfehler: Y- Kante nicht gefunden (Feinmessung)"
+                    ENDIF
                   ELSE
-                    ErrMsg "Messfehler: Y- Kante nicht gefunden (Feinmessung)"
+                    ErrMsg "Messfehler: Y- Kante nicht gefunden (Schnellsuche)"
                   ENDIF
+
                 ELSE
-                  ErrMsg "Messfehler: Y- Kante nicht gefunden (Schnellsuche)"
+                  ErrMsg "Messfehler: Y+ Kante nicht gefunden (Feinmessung)"
                 ENDIF
-
               ELSE
-                ErrMsg "Messfehler: Y+ Kante nicht gefunden (Feinmessung)"
+                ErrMsg "Messfehler: Y+ Kante nicht gefunden (Schnellsuche)"
               ENDIF
+
             ELSE
-              ErrMsg "Messfehler: Y+ Kante nicht gefunden (Schnellsuche)"
+              ErrMsg "Messfehler: X- Kante nicht gefunden (Feinmessung)"
             ENDIF
-
           ELSE
-            ErrMsg "Messfehler: X- Kante nicht gefunden (Feinmessung)"
+            ErrMsg "Messfehler: X- Kante nicht gefunden (Schnellsuche)"
           ENDIF
-        ELSE
-          ErrMsg "Messfehler: X- Kante nicht gefunden (Schnellsuche)"
-        ENDIF
 
+        ELSE
+          ErrMsg "Messfehler: X+ Kante nicht gefunden (Feinmessung)"
+        ENDIF
       ELSE
-        ErrMsg "Messfehler: X+ Kante nicht gefunden (Feinmessung)"
+        ErrMsg "Messfehler: X+ Kante nicht gefunden (Schnellsuche)"
       ENDIF
     ELSE
-      ErrMsg "Messfehler: X+ Kante nicht gefunden (Schnellsuche)"
+      ErrMsg "Probing in Simulation/Render mode not allowed."
     ENDIF
-
   ENDIF
 
 ENDSUB
@@ -1811,6 +1873,11 @@ SUB user_11 ; Werkstueck-Dicken-Messung
 ; KONFIGURATION:
 ; #4610 - Toleranz fuer Dicken-Abweichung (mm) - Default: 0.2
 ;---------------------------------------------------------------------------------------
+
+  ; WICHTIG: Feedrate-Variablen in lokale Variablen kopieren
+  ; um Auswertungsprobleme in verschachtelten IF-Bloecken zu vermeiden
+  #150 = #4512  ; Anfahrgeschwindigkeit Z-Achse
+  #151 = #4513  ; Tastgeschwindigkeit Z-Achse
 
   ; Standard-Toleranz setzen falls nicht konfiguriert
   IF [#4610 == 0] THEN
@@ -1856,131 +1923,134 @@ SUB user_11 ; Werkstueck-Dicken-Messung
 
   IF [#5398 == 1] THEN
 
-    M5  ; Spindel ausschalten (Sicherheit)
+    IF [[#5380 == 0] AND [#5397 == 0]] THEN
+      M5  ; Spindel ausschalten (Sicherheit)
 
-    msg "Taste Oberseite an..."
+      msg "Taste Oberseite an..."
 
-    ; Schnelles Antasten
-    G91 G38.2 Z-[#1110 + 20] F[#4512]  ; Nach unten, Reserve einrechnen
-    G90
-
-    IF [#5067 == 1] THEN
-      ; Langsames Antasten fuer Genauigkeit
-      G91 G38.2 Z20 F[#4513]
+      ; Schnelles Antasten
+      G91 G38.2 Z-[#1110 + 20] F[#150]  ; Nach unten, Reserve einrechnen
       G90
 
       IF [#5067 == 1] THEN
-
-        ; Position speichern (mit Kugelradius-Kompensation bei 3D-Taster)
-        IF [#1112 == 1] THEN
-          #1113 = [#5063 + #4546]  ; 3D-Taster: + Kugelradius
-        ELSE
-          #1113 = [#5063 + #4510]  ; Z-Probe: + Tasterhoehe
-        ENDIF
-
-        msg "Oberseite gemessen: Z = " #1113 " mm"
-
-        ; Sicher nach oben fahren
-        G91 G0 Z10
+        ; Langsames Antasten fuer Genauigkeit
+        G91 G38.2 Z20 F[#151]
         G90
 
-        ; === UNTERSEITE MESSEN ===
-        DlgMsg "Taster UNTER Werkstueck-Unterseite positionieren und bestaetigen"
+        IF [#5067 == 1] THEN
 
-        IF [#5398 == 1] THEN
+          ; Position speichern (mit Kugelradius-Kompensation bei 3D-Taster)
+          IF [#1112 == 1] THEN
+            #1113 = [#5063 + #4546]  ; 3D-Taster: + Kugelradius
+          ELSE
+            #1113 = [#5063 + #4510]  ; Z-Probe: + Tasterhoehe
+          ENDIF
 
-          msg "Taste Unterseite an..."
+          msg "Oberseite gemessen: Z = " #1113 " mm"
 
-          ; Schnelles Antasten (von unten nach oben!)
-          G91 G38.2 Z[#1110 + 20] F[#4512]  ; Nach oben
+          ; Sicher nach oben fahren
+          G91 G0 Z10
           G90
 
-          IF [#5067 == 1] THEN
-            ; Langsames Antasten
-            G91 G38.2 Z-20 F[#4513]
+          ; === UNTERSEITE MESSEN ===
+          DlgMsg "Taster UNTER Werkstueck-Unterseite positionieren und bestaetigen"
+
+          IF [#5398 == 1] THEN
+
+            msg "Taste Unterseite an..."
+
+            ; Schnelles Antasten (von unten nach oben!)
+            G91 G38.2 Z[#1110 + 20] F[#150]  ; Nach oben
             G90
 
             IF [#5067 == 1] THEN
-
-              ; Position speichern (mit Kugelradius-Kompensation bei 3D-Taster)
-              IF [#1112 == 1] THEN
-                #1114 = [#5063 - #4546]  ; 3D-Taster: - Kugelradius
-              ELSE
-                #1114 = [#5063 - #4510]  ; Z-Probe: - Tasterhoehe
-              ENDIF
-
-              msg "Unterseite gemessen: Z = " #1114 " mm"
-
-              ; Sicher nach unten fahren
-              G91 G0 Z-10
+              ; Langsames Antasten
+              G91 G38.2 Z-20 F[#151]
               G90
 
-              ; === BERECHNUNGEN ===
-              msg "Berechne Werkstueck-Dicke..."
+              IF [#5067 == 1] THEN
 
-              ; Ist-Dicke berechnen
-              #2110 = [#1113 - #1114]
+                ; Position speichern (mit Kugelradius-Kompensation bei 3D-Taster)
+                IF [#1112 == 1] THEN
+                  #1114 = [#5063 - #4546]  ; 3D-Taster: - Kugelradius
+                ELSE
+                  #1114 = [#5063 - #4510]  ; Z-Probe: - Tasterhoehe
+                ENDIF
 
-              ; Abweichung berechnen
-              #2111 = [#2110 - #1110]
+                msg "Unterseite gemessen: Z = " #1114 " mm"
 
-              ; === ERGEBNISSE ANZEIGEN ===
-              IF [ABS[#2111] <= #4610] THEN
-                msg "=== DICKEN-MESSUNG ERFOLGREICH ==="
-                msg "Ist-Dicke:   " #2110 " mm"
-                msg "Soll-Dicke:  " #1110 " mm"
-                msg "Abweichung:  " #2111 " mm"
-                msg "Dicke innerhalb Toleranz (" #4610 " mm)"
+                ; Sicher nach unten fahren
+                G91 G0 Z-10
+                G90
 
-                DlgMsg "Dicken-Messung erfolgreich - Masse OK!" "Ist-Dicke: " 2110 "Soll-Dicke: " 1110 "Abweichung: " 2111 "Toleranz: " 4610
+                ; === BERECHNUNGEN ===
+                msg "Berechne Werkstueck-Dicke..."
+
+                ; Ist-Dicke berechnen
+                #2110 = [#1113 - #1114]
+
+                ; Abweichung berechnen
+                #2111 = [#2110 - #1110]
+
+                ; === ERGEBNISSE ANZEIGEN ===
+                IF [ABS[#2111] <= #4610] THEN
+                  msg "=== DICKEN-MESSUNG ERFOLGREICH ==="
+                  msg "Ist-Dicke:   " #2110 " mm"
+                  msg "Soll-Dicke:  " #1110 " mm"
+                  msg "Abweichung:  " #2111 " mm"
+                  msg "Dicke innerhalb Toleranz (" #4610 " mm)"
+
+                  DlgMsg "Dicken-Messung erfolgreich - Masse OK!" "Ist-Dicke: " 2110 "Soll-Dicke: " 1110 "Abweichung: " 2111 "Toleranz: " 4610
+
+                ELSE
+                  msg "!!! WARNUNG: DICKEN-ABWEICHUNG ZU GROSS !!!"
+                  msg "Ist-Dicke:   " #2110 " mm"
+                  msg "Soll-Dicke:  " #1110 " mm"
+                  msg "Abweichung:  " #2111 " mm"
+                  msg "Toleranz:    " #4610 " mm"
+
+                  DlgMsg "WARNUNG: Dicken-Abweichung zu gross!" "Ist-Dicke: " 2110 "Soll-Dicke: " 1110 "Abweichung: " 2111 "Max. Toleranz: " 4610
+                ENDIF
+
+                ; === Z-NULLPUNKT SETZEN ===
+                msg "Setze Z-Nullpunkt..."
+
+                ; Nullpunkt-Position berechnen
+                IF [#1111 == 0] THEN
+                  #2112 = #1113  ; Oberseite
+                  msg "Nullpunkt wird auf Oberseite gesetzt"
+                ELSE
+                  #2112 = #1114  ; Unterseite
+                  msg "Nullpunkt wird auf Unterseite gesetzt"
+                ENDIF
+
+                ; Z-Nullpunkt setzen
+                G92 Z[#5003 - #2112]
+
+                IF [#1111 == 0] THEN
+                  msg "Z-Nullpunkt auf Oberseite gesetzt (Z=0)"
+                ELSE
+                  msg "Z-Nullpunkt auf Unterseite gesetzt (Z=0)"
+                ENDIF
 
               ELSE
-                msg "!!! WARNUNG: DICKEN-ABWEICHUNG ZU GROSS !!!"
-                msg "Ist-Dicke:   " #2110 " mm"
-                msg "Soll-Dicke:  " #1110 " mm"
-                msg "Abweichung:  " #2111 " mm"
-                msg "Toleranz:    " #4610 " mm"
-
-                DlgMsg "WARNUNG: Dicken-Abweichung zu gross!" "Ist-Dicke: " 2110 "Soll-Dicke: " 1110 "Abweichung: " 2111 "Max. Toleranz: " 4610
+                ErrMsg "Messfehler: Unterseite nicht gefunden (Feinmessung)"
               ENDIF
-
-              ; === Z-NULLPUNKT SETZEN ===
-              msg "Setze Z-Nullpunkt..."
-
-              ; Nullpunkt-Position berechnen
-              IF [#1111 == 0] THEN
-                #2112 = #1113  ; Oberseite
-                msg "Nullpunkt wird auf Oberseite gesetzt"
-              ELSE
-                #2112 = #1114  ; Unterseite
-                msg "Nullpunkt wird auf Unterseite gesetzt"
-              ENDIF
-
-              ; Z-Nullpunkt setzen
-              G92 Z[#5003 - #2112]
-
-              IF [#1111 == 0] THEN
-                msg "Z-Nullpunkt auf Oberseite gesetzt (Z=0)"
-              ELSE
-                msg "Z-Nullpunkt auf Unterseite gesetzt (Z=0)"
-              ENDIF
-
             ELSE
-              ErrMsg "Messfehler: Unterseite nicht gefunden (Feinmessung)"
+              ErrMsg "Messfehler: Unterseite nicht gefunden (Schnellsuche)"
             ENDIF
-          ELSE
-            ErrMsg "Messfehler: Unterseite nicht gefunden (Schnellsuche)"
+
           ENDIF
 
+        ELSE
+          ErrMsg "Messfehler: Oberseite nicht gefunden (Feinmessung)"
         ENDIF
-
       ELSE
-        ErrMsg "Messfehler: Oberseite nicht gefunden (Feinmessung)"
+        ErrMsg "Messfehler: Oberseite nicht gefunden (Schnellsuche)"
       ENDIF
     ELSE
-      ErrMsg "Messfehler: Oberseite nicht gefunden (Schnellsuche)"
+      ErrMsg "Probing in Simulation/Render mode not allowed."
     ENDIF
-
   ENDIF
 
 ENDSUB

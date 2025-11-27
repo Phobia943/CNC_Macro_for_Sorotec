@@ -1,0 +1,25 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Spindel-Warmlauf -->
+  <defs>
+    <style>
+      .primary { fill: #E30613; }
+      .secondary { fill: #1A1A1A; }
+      .stroke { stroke: #1A1A1A; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Spindle body -->
+  <rect class="secondary" x="24" y="12" width="16" height="32" rx="2"/>
+  <circle class="secondary" cx="32" cy="32" r="6"/>
+
+  <!-- Rotation arrows -->
+  <path class="primary" d="M44 26 A12 12 0 0 1 44 38" stroke-width="3" stroke="#E30613" fill="none" stroke-linecap="round"/>
+  <path class="primary" d="M20 26 A12 12 0 0 0 20 38" stroke-width="3" stroke="#E30613" fill="none" stroke-linecap="round"/>
+  <polygon class="primary" points="46,24 50,26 46,28"/>
+  <polygon class="primary" points="18,36 14,38 18,40"/>
+
+  <!-- Heat indicator -->
+  <path class="primary" d="M28 48 Q26 52 28 56 Q30 52 28 48" opacity="0.7"/>
+  <path class="primary" d="M32 48 Q30 52 32 56 Q34 52 32 48" opacity="0.7"/>
+  <path class="primary" d="M36 48 Q34 52 36 56 Q38 52 36 48" opacity="0.7"/>
+</svg>

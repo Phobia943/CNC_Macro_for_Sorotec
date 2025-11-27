@@ -1,0 +1,19 @@
+; Eding CNC - Benutzermakro Tooltips (Detaillierte Beschreibungen)
+; Diese Datei definiert die Tooltip-Texte für die Benutzermakros beim Hovern
+; Format: user_X=Beschreibungstext
+;
+; Version: 3.6
+; Datum: 2025-11-27
+
+user_1=Werkzeuglaengenmessung: Misst die Laenge des eingespannten Werkzeugs mit Laengentaster
+user_2=Z-Nullpunkt setzen: Setzt den Z-Nullpunkt mit 3D-Taster auf Werkstueckoberseite
+user_3=Spindel Warmlauf: Waermt die Spindel in 4 Stufen (3000-18000 U/min) auf
+user_4=Werkzeugwechsel: Fuehrt manuellen Werkzeugwechsel mit Referenzfahrt durch
+user_5=Einzelkante antasten: Tastet eine Kante an und setzt X- oder Y-Nullpunkt automatisch
+user_6=Ecke + Rotation: Findet Ecke und berechnet Rotationswinkel aus 2 Kanten
+user_7=Loch-Mittelpunkt: Findet Mittelpunkt eines kreisfoermigen Lochs (4-Punkt-Messung)
+user_8=Zylinder-Mittelpunkt: Findet Mittelpunkt eines aussenliegenden Zylinders/Boss
+user_9=Werkzeug-Bruchkontrolle: Prueft Werkzeuglaenge auf Bruch oder Verschleiss
+user_10=Rechteck vermessen: Misst alle 4 Kanten und berechnet Mittelpunkt, Groesse, Abweichung
+user_11=Dicke messen: Misst Werkstueck-Dicke von oben nach unten (doppelseitige Bearbeitung)
+user_12=Koordinaten-Manager: Verwaltet Nullpunkte in G54-G59 (speichern/laden/anzeigen)

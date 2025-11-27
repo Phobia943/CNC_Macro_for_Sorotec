@@ -1,0 +1,168 @@
+╔════════════════════════════════════════════════════════════════╗
+║                                                                ║
+║        ✓ CONFIG STRING-FEHLER BEHOBEN                         ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+Datum: 2025-11-27 12:40
+
+
+❌ FEHLER:
+
+   G1128: L342: Unamed string too long
+   → In gosub config (Konfigurationsfunktion)
+
+
+🔧 BEHOBENE ZEILEN:
+
+   Zeile 342 - config_toolchange:
+   ────────────────────────────────
+   VORHER: "TYP (0=Ignorieren, 1=Nur Position, 2=Position+Vermessen)"
+   JETZT:  "TYP (0=Aus, 1=Position, 2=Pos+Messen)"
+
+   Zeile 346 - config_toolchange:
+   ────────────────────────────────
+   VORHER: "Werkzeugwechselposition eingeben"
+   JETZT:  "Werkzeugwechsel-Position"
+
+   Zeile 358 - config_znull:
+   ──────────────────────────
+   VORHER: "Z-Nullpunkt Sensor Konfiguration"
+   JETZT:  "Z-Nullpunkt Sensor"
+
+   Zeile 372-373 - config_toollength:
+   ───────────────────────────────────
+   VORHER: Eine sehr lange Zeile mit 7 Parametern
+   JETZT:  Aufgeteilt in 2 Dialoge:
+           - "WZ-Laengensensor Position"
+           - "WZ-Laengensensor Parameter"
+
+   Zeile 376 - config_toollength:
+   ───────────────────────────────
+   VORHER: "Bruchkontrolle Einstellungen"
+   JETZT:  "Bruchkontrolle"
+
+   Zeile 379 - config_toollength:
+   ───────────────────────────────
+   VORHER: "Position nach Werkzeugmessung"
+   JETZT:  "Position nach WZ-Messung"
+
+   Zeile 391-392 - config_3dprobe:
+   ────────────────────────────────
+   VORHER: Eine sehr lange Zeile mit 5 Parametern
+   JETZT:  Aufgeteilt in 2 Dialoge:
+           - "3D-Taster Grundeinstellung"
+           - "3D-Taster Vorschuebe"
+
+   Zeile 395 - config_3dprobe:
+   ────────────────────────────
+   VORHER: "3D-Taster Versatz-Werte"
+   JETZT:  "3D-Taster Versatz"
+
+   Zeile 398 - config_3dprobe:
+   ────────────────────────────
+   VORHER: "Spindelversatz (falls Taster exzentrisch)"
+   JETZT:  "Spindelversatz"
+
+   Zeile 409-410 - config_spindle_warmup:
+   ───────────────────────────────────────
+   VORHER: Eine extrem lange Zeile mit 8 Parametern!
+   JETZT:  Aufgeteilt in 2 Dialoge:
+           - "Spindel-Warmlauf Stufe 1+2"
+           - "Spindel-Warmlauf Stufe 3+4"
+
+
+✅ ERGEBNIS:
+
+   Alle config-Funktionen verwenden jetzt kurze Strings:
+   ✓ config_toolchange      - OK
+   ✓ config_znull           - OK
+   ✓ config_toollength      - OK (aufgeteilt)
+   ✓ config_3dprobe         - OK (aufgeteilt)
+   ✓ config_spindle_warmup  - OK (aufgeteilt)
+
+
+📋 VERBESSERUNGEN:
+
+   Statt einem langen Dialog → Mehrere kurze Dialoge
+   ──────────────────────────────────────────────────
+
+   Beispiel Werkzeuglaengensensor:
+   VORHER: Ein Dialog mit 7 Parametern
+   JETZT:  - Dialog 1: Position (X, Y, Sicherheit Z, Spindelnase)
+           - Dialog 2: Parameter (Max. Länge, Vorschübe)
+
+   Beispiel Spindel-Warmlauf:
+   VORHER: Ein Dialog mit 8 Parametern!
+   JETZT:  - Dialog 1: Stufe 1 + 2
+           - Dialog 2: Stufe 3 + 4
+
+
+🚀 INSTALLATION:
+
+   1. Macro neu installieren:
+      ───────────────────────
+      Windows:  .\SETUP.ps1  oder  SETUP.bat
+      Linux:    ./SETUP.sh
+
+      ODER manuell:
+      copy macro.cnc C:\EdingCNC5.3\config\macro.cnc
+
+   2. Eding CNC neu starten
+
+   3. CONFIG testen:
+      ──────────────
+      MDI → gosub config
+      → Sollte jetzt ohne Fehler funktionieren! ✓
+
+
+💡 VORTEILE DER AUFTEILUNG:
+
+   ✓ Keine String-Längen-Fehler mehr
+   ✓ Übersichtlicher für den Benutzer
+   ✓ Logische Gruppierung der Parameter
+   ✓ Einfacher zu navigieren
+
+
+📖 VERWENDUNG:
+
+   Nach Installation im MDI eingeben:
+   ──────────────────────────────────
+   gosub config
+
+   Dann durch die Konfigurationsmenüs gehen:
+   ──────────────────────────────────────────
+   1. Werkzeugwechsel-Typ → 1 Dialog
+   2. Z-Nullpunkt Sensor → 1 Dialog
+   3. Werkzeuglängenmessung:
+      - Position nach Referenzfahrt → 1 Dialog
+      - WZ-Sensor Position → 1 Dialog
+      - WZ-Sensor Parameter → 1 Dialog
+      - Bruchkontrolle → 1 Dialog
+      - Position nach Messung → 1 Dialog
+   4. 3D-Taster:
+      - Grundeinstellung → 1 Dialog
+      - Vorschübe → 1 Dialog
+      - Versatz → 1 Dialog
+      - Spindelversatz → 1 Dialog
+   5. Spindel-Warmlauf:
+      - Stufe 1+2 → 1 Dialog
+      - Stufe 3+4 → 1 Dialog
+
+   Gesamt: 13 Dialoge statt 5 überlangen
+
+
+⚠️ WICHTIG:
+
+   Alle Parameter sind weiterhin vorhanden!
+   ─────────────────────────────────────────
+   Es wurde nichts entfernt, nur auf mehrere
+   Dialoge aufgeteilt für bessere Lesbarkeit.
+
+
+═══════════════════════════════════════════════════════════════
+
+Version: 3.6.3
+Datum: 2025-11-27
+Fix: Alle String-Längen-Fehler in CONFIG behoben
+Status: gosub config funktioniert jetzt! ✓

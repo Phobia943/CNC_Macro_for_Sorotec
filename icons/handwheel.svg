@@ -1,0 +1,32 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Handwheel (XHC) -->
+  <defs>
+    <style>
+      .primary { fill: #E30613; }
+      .secondary { fill: #1A1A1A; }
+      .stroke { stroke: #1A1A1A; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Handwheel outer circle -->
+  <circle class="stroke" cx="32" cy="32" r="22"/>
+  <circle class="secondary" cx="32" cy="32" r="18"/>
+
+  <!-- Handwheel center -->
+  <circle class="stroke" cx="32" cy="32" r="10" fill="white"/>
+  <circle class="secondary" cx="32" cy="32" r="6"/>
+
+  <!-- Handwheel spokes/grips -->
+  <rect class="primary" x="30" y="10" width="4" height="8" rx="1"/>
+  <rect class="primary" x="30" y="46" width="4" height="8" rx="1"/>
+  <rect class="primary" x="10" y="30" width="8" height="4" rx="1"/>
+  <rect class="primary" x="46" y="30" width="8" height="4" rx="1"/>
+
+  <!-- Display/Screen on handwheel -->
+  <rect class="stroke" cx="32" cy="32" x="26" y="28" width="12" height="8" rx="1" fill="#E30613" opacity="0.3"/>
+
+  <!-- Button indicators -->
+  <circle class="primary" cx="32" cy="50" r="2"/>
+  <circle class="primary" cx="28" cy="48" r="1.5" opacity="0.5"/>
+  <circle class="primary" cx="36" cy="48" r="1.5" opacity="0.5"/>
+</svg>

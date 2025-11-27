@@ -1,0 +1,25 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Z-Nullpunktermittlung -->
+  <defs>
+    <style>
+      .primary { fill: #E30613; }
+      .secondary { fill: #1A1A1A; }
+      .stroke { stroke: #1A1A1A; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Z-Axis arrow -->
+  <line class="stroke" x1="32" y1="56" x2="32" y2="12"/>
+  <path class="primary" d="M32 8 L26 16 L38 16 Z"/>
+  <text x="38" y="28" font-family="Arial, sans-serif" font-size="16" font-weight="bold" class="secondary">Z</text>
+
+  <!-- Workpiece -->
+  <rect class="secondary" x="16" y="48" width="32" height="8" rx="1"/>
+
+  <!-- Probe tip -->
+  <circle class="primary" cx="32" cy="44" r="4"/>
+
+  <!-- Zero point indicator -->
+  <circle class="stroke" cx="32" cy="52" r="8"/>
+  <text x="28" y="56" font-family="Arial, sans-serif" font-size="12" font-weight="bold" class="primary">0</text>
+</svg>

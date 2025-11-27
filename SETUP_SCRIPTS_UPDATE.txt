@@ -1,0 +1,132 @@
+╔════════════════════════════════════════════════════════════════╗
+║                                                                ║
+║        ✓ SETUP-SCRIPTS AKTUALISIERT!                          ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+Datum: 2025-11-27
+
+
+✅ ALLE SETUP-SCRIPTS WURDEN AKTUALISIERT:
+
+   ✓ SETUP.ps1     → Installiert jetzt SVG + BMP Icons
+   ✓ SETUP.bat     → Installiert jetzt SVG + BMP Icons
+   ✓ SETUP.sh      → Installiert jetzt SVG + BMP Icons
+
+
+🔧 WAS WURDE GEÄNDERT:
+
+   Die Setup-Scripts kopieren jetzt automatisch:
+
+   1. SVG Icons aus icons/ nach EdingCNC/icons/op_f_key/user/
+   2. BMP Icons aus icons/bmp/ nach EdingCNC/icons/op_f_key/user/
+   3. Macro nach EdingCNC/config/macro.cnc
+   4. Dokumentation nach EdingCNC/docs/
+
+
+📋 AUSGABE DER SETUP-SCRIPTS:
+
+   Vorher:
+   -------
+   ✓ 18 Icons installiert
+
+   Jetzt:
+   ------
+   ✓ 18 SVG Icons installiert
+   ✓ 12 BMP Icons installiert (UX.bmp Format)
+
+
+🚀 VERWENDUNG:
+
+   Einfach eines der Setup-Scripts ausführen:
+
+   Windows PowerShell:
+   -------------------
+   .\SETUP.ps1
+
+   Windows Batch:
+   --------------
+   SETUP.bat
+
+   Linux/Unix:
+   -----------
+   ./SETUP.sh
+
+   Die Scripts installieren automatisch:
+   - Das Macro (macro.cnc)
+   - Alle SVG Icons (18 Stück)
+   - Alle BMP Icons (12 Stück, U1.bmp - U12.bmp)
+   - Die Dokumentation
+
+
+📁 WAS WIRD INSTALLIERT:
+
+   Nach Ausführung der Scripts befinden sich folgende Dateien in Eding CNC:
+
+   EdingCNC/
+   ├── config/
+   │   └── macro.cnc                          ← Das Haupt-Macro
+   ├── icons/
+   │   └── op_f_key/
+   │       └── user/
+   │           ├── user_1_tool_length.svg     ← SVG Icons
+   │           ├── user_2_z_zero.svg
+   │           ├── ... (18 SVG Dateien)
+   │           ├── U1.bmp                     ← BMP Icons (NEU!)
+   │           ├── U2.bmp
+   │           ├── ... (12 BMP Dateien)
+   │           ├── ICON_OVERVIEW.md
+   │           └── ICON_PREVIEW.html
+   ├── docs/
+   │   ├── README.md
+   │   ├── FEATURE_COMPARISON_MATRIX.md
+   │   └── QUICK_COMPARISON_SUMMARY.md
+   └── backups/
+       ├── macro.cnc.backup_TIMESTAMP
+       └── icons_backup_TIMESTAMP/
+
+
+✅ VORTEILE DER AKTUALISIERUNG:
+
+   ✓ Komplette Installation mit einem Klick
+   ✓ Keine manuellen Kopier-Schritte mehr nötig
+   ✓ Automatische Erkennung von BMP-Icons
+   ✓ Fallback: Wenn keine BMPs vorhanden, wird Info angezeigt
+   ✓ SVG und BMP Icons werden gemeinsam installiert
+
+
+💡 HINWEISE:
+
+   - Die BMP-Icons müssen zuerst mit CONVERT_TO_BMP.ps1 oder
+     convert_to_bmp.py erstellt werden
+
+   - Falls icons/bmp/ nicht existiert oder leer ist, zeigen die
+     Setup-Scripts eine Info-Meldung und fahren fort
+
+   - SVG Icons werden weiterhin immer installiert
+
+
+═══════════════════════════════════════════════════════════════
+
+🔄 NÄCHSTE SCHRITTE FÜR VOLLSTÄNDIGE INSTALLATION:
+
+   1. BMP Icons erstellen (falls noch nicht geschehen):
+      ───────────────────────────────────────────────
+      Windows:  .\CONVERT_TO_BMP.ps1
+      Linux:    venv/bin/python3 convert_to_bmp.py
+
+   2. Setup-Script ausführen:
+      ───────────────────────
+      Windows:  .\SETUP.ps1  oder  SETUP.bat
+      Linux:    ./SETUP.sh
+
+   3. Eding CNC neu starten
+
+   4. Fertig! Alle Icons sollten erscheinen ✓
+
+
+═══════════════════════════════════════════════════════════════
+
+Version: 3.6 (Updated)
+Datum: 2025-11-27
+Status: Alle Setup-Scripts aktualisiert ✓

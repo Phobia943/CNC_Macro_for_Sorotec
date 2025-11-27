@@ -1,0 +1,90 @@
+╔════════════════════════════════════════════════════════════════╗
+║                                                                ║
+║        SOROTEC EDING CNC MACRO V3.6 - INSTALLATIONS-INFO      ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+📁 Aktuelles Verzeichnis:
+   /home/daniel/KI Tools/Claude/Grizzly Simgineering/Fraese/CNC_Macro_for_Sorotec/
+
+
+🚀 INSTALLATION STARTEN:
+
+   Windows PowerShell (empfohlen):
+   --------------------------------
+   1. Rechtsklick auf "SETUP.ps1"
+   2. "Mit PowerShell ausführen" wählen
+
+   Windows Batch (einfach):
+   ------------------------
+   1. Doppelklick auf "SETUP.bat"
+
+   Linux/Unix:
+   -----------
+   chmod +x SETUP.sh
+   ./SETUP.sh
+
+
+📂 INSTALLATIONS-ZIELE:
+
+   Macro:  EdingCNC/config/macro.cnc
+   Icons:  EdingCNC/icons/op_f_key/user/ (18 SVG + 12 BMP)
+   Docs:   EdingCNC/docs/
+
+
+✅ HINWEIS:
+
+   Die Verzeichnisse config/ und icons/op_f_key/user/ existieren
+   bereits - perfekt! Die Scripts nutzen diese automatisch.
+
+   ✓ BMP-Icons wurden erstellt in: icons/bmp/
+   → U1.bmp bis U12.bmp (Eding CNC Format)
+   → Siehe: icons/bmp/INSTALL_ICONS.txt
+
+   ✓ Tooltip-Konfiguration hinzugefügt:
+   → user_macros.ini, user_macro_names.txt, user_macro_tooltips.txt
+   → Benutzerfreundliche Namen statt "user_X"
+   → Siehe: TOOLTIP_CONFIG_README.md
+
+
+📖 DOKUMENTATION:
+
+   Installation:
+   - INSTALLATION.md            → Vollständige Anleitung
+   - SETUP_README.md            → Schnellstart
+
+   Konfiguration: ⭐ NEU!
+   - KONFIGURATION_ANLEITUNG.md → Vollständige Config-Anleitung
+   - KONFIG_SCHNELLSTART.txt    → Schnellreferenz
+
+   Icons:
+   - icons/ICON_OVERVIEW.md     → Icon-Dokumentation
+   - BMP_CONVERSION_README.md   → BMP Icon Konvertierung
+   - icons/bmp/INSTALL_ICONS.txt → BMP Installation
+
+   Tooltips:
+   - TOOLTIP_CONFIG_README.md   → Tooltip-Konfiguration
+   - TOOLTIP_UPDATE.txt         → Tooltip-Features
+
+
+🔄 DEINSTALLATION:
+
+   Windows: .\UNINSTALL.ps1
+   Linux:   (nutzen Sie Backups aus EdingCNC/backups/)
+
+
+⚠️ WICHTIG:
+
+   - Eding CNC sollte während Installation GESCHLOSSEN sein
+   - Automatische Backups werden erstellt
+   - Nach Installation: Eding CNC neu starten
+
+   ⭐ NACH INSTALLATION KONFIGURIEREN:
+   - Eding CNC öffnen → MDI-Modus
+   - Eingeben: gosub config
+   - Wichtigste Parameter einstellen (siehe KONFIG_SCHNELLSTART.txt)
+
+
+═══════════════════════════════════════════════════════════════
+
+Version: 3.6 | Datum: 2025-11-27

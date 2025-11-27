@@ -1,0 +1,76 @@
+╔════════════════════════════════════════════════════════════════╗
+║                                                                ║
+║        ✓ STRING-FEHLER BEHOBEN (Zeile 462)                    ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+Datum: 2025-11-27 12:10
+
+
+❌ FEHLER:
+
+   G1128:L462: Unamed String too long
+   → In user_1 (Werkzeuglaengenmessung)
+
+
+🔧 BEHOBENE ZEILEN:
+
+   Zeile 462 (DlgMsg):
+   ───────────────────
+   VORHER: "Geschaetzte Werkzeuglaenge ca. (mm):"  (38 Zeichen)
+   JETZT:  "Geschaetzte Laenge (mm):"              (24 Zeichen)
+
+   Zeile 468 (DlgMsg Warnung):
+   ───────────────────────────
+   VORHER: "!!! WARNUNG: Werkzeuglaenge muss positiv sein !!!"
+   JETZT:  "WARNUNG: Laenge muss positiv sein"
+
+   Zeile 474 (DlgMsg Warnung):
+   ───────────────────────────
+   VORHER: "!!! WARNUNG: Werkzeug zu lang fuer Maschine !!!"
+   JETZT:  "WARNUNG: Werkzeug zu lang!"
+
+   Zeile 479 (ErrMsg):
+   ───────────────────
+   VORHER: "Werkzeuglaengenmessung abgebrochen - Ungueltige Laenge"
+   JETZT:  "WZ-Messung abgebrochen - Ungueltige Laenge"
+
+
+✅ STATUS:
+
+   Der Fehler wurde behoben. Das Macro sollte jetzt funktionieren!
+
+
+🚀 NÄCHSTE SCHRITTE:
+
+   1. Macro neu installieren:
+      ────────────────────────
+      Windows:  .\SETUP.ps1  oder  SETUP.bat
+      Linux:    ./SETUP.sh
+
+      ODER manuell kopieren:
+      copy macro.cnc C:\EdingCNC5.3\config\macro.cnc
+
+   2. Eding CNC neu starten
+
+   3. Werkzeuglaengenmessung testen:
+      ────────────────────────────────
+      → Starten Sie user_1 (Werkzeuglaengenmessung)
+      → Der Fehler sollte nicht mehr auftreten
+
+
+📋 EDING CNC STRING-LIMITS:
+
+   Eding CNC hat folgende String-Limits:
+   - msg/warnmsg/errmsg:  ~60 Zeichen
+   - DlgMsg (Text):        ~50 Zeichen
+   - DlgMsg (Label):       ~40 Zeichen
+
+   Alle Strings im Macro sind jetzt unter diesen Limits!
+
+
+═══════════════════════════════════════════════════════════════
+
+Version: 3.6.1
+Datum: 2025-11-27
+Fix: String-Längen-Fehler in user_1

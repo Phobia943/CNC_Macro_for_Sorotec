@@ -1,0 +1,26 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Referenzfahrt / Homing -->
+  <defs>
+    <style>
+      .primary { fill: #E30613; }
+      .secondary { fill: #1A1A1A; }
+      .stroke { stroke: #1A1A1A; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Home symbol (house) -->
+  <path class="secondary" d="M32 12 L52 28 L48 28 L48 52 L38 52 L38 40 L26 40 L26 52 L16 52 L16 28 L12 28 Z"/>
+  <rect class="primary" x="28" y="44" width="8" height="8"/>
+
+  <!-- X/Y/Z Axes indicators -->
+  <path class="primary" d="M8 8 L14 8" stroke="#E30613" stroke-width="2"/>
+  <path class="primary" d="M14 8 L12 10 L12 6 Z"/>
+  <text x="16" y="12" font-family="Arial, sans-serif" font-size="10" font-weight="bold" class="primary">X</text>
+
+  <path class="primary" d="M8 8 L8 14" stroke="#E30613" stroke-width="2"/>
+  <path class="primary" d="M8 14 L6 12 L10 12 Z"/>
+  <text x="4" y="22" font-family="Arial, sans-serif" font-size="10" font-weight="bold" class="primary">Y</text>
+
+  <circle class="stroke" cx="56" cy="56" r="6" fill="#E30613" opacity="0.3"/>
+  <text x="52" y="60" font-family="Arial, sans-serif" font-size="10" font-weight="bold" class="primary">Z</text>
+</svg>

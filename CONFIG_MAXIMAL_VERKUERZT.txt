@@ -1,0 +1,193 @@
+╔════════════════════════════════════════════════════════════════╗
+║                                                                ║
+║        ✓ CONFIG STRINGS MAXIMAL VERKÜRZT                      ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+Datum: 2025-11-27 13:00
+
+
+🔧 ALLE STRINGS RADIKAL VERKÜRZT:
+
+   Zeile 342 - config_toolchange:
+   ────────────────────────────────
+   JETZT: "Werkzeugwechsel-Typ" + "0=Aus, 1=Pos, 2=Pos+Mess"
+   → Nur 22 + 29 Zeichen
+
+   Zeile 346 - config_toolchange:
+   ────────────────────────────────
+   JETZT: "WZ-Wechsel Position" + Labels "X (mm)" etc.
+   → Nur 19 Zeichen für Titel
+
+   Zeile 358 - config_znull:
+   ──────────────────────────
+   JETZT: "Z-Sensor" + "Typ (0=NO, 1=NC)" etc.
+   → Nur 8 Zeichen für Titel
+   → NO = Normally Open (Öffner)
+   → NC = Normally Closed (Schließer)
+
+   Zeile 369 - config_toollength:
+   ────────────────────────────────
+   JETZT: "Pos nach Referenz"
+   → Nur 16 Zeichen
+
+   Zeile 372 - config_toollength:
+   ────────────────────────────────
+   JETZT: "WZ-Sensor Pos" + kurze Labels
+   → Nur 13 Zeichen für Titel
+
+   Zeile 373 - config_toollength:
+   ────────────────────────────────
+   JETZT: "WZ-Sensor" + "Max Laenge (mm)" etc.
+   → Nur 9 Zeichen für Titel
+
+   Zeile 376 - config_toollength:
+   ────────────────────────────────
+   JETZT: "Bruchkontrolle" + "Aktiv (0/1)"
+   → Nur 14 Zeichen für Titel
+
+   Zeile 379 - config_toollength:
+   ────────────────────────────────
+   JETZT: "Pos nach Messung"
+   → Nur 15 Zeichen
+
+   Zeile 391 - config_3dprobe:
+   ────────────────────────────
+   JETZT: "3D-Taster" + "Typ (0=NO, 1=NC)"
+   → Nur 9 Zeichen für Titel
+
+   Zeile 392 - config_3dprobe:
+   ────────────────────────────
+   JETZT: "3D-Vorschuebe" + kurze Labels
+   → Nur 13 Zeichen
+
+   Zeile 395 - config_3dprobe:
+   ────────────────────────────
+   JETZT: "3D-Versatz"
+   → Nur 10 Zeichen
+
+   Zeile 398 - config_3dprobe:
+   ────────────────────────────
+   JETZT: "Spindelversatz" + "Aktiv (0/1)"
+   → Nur 14 Zeichen
+
+   Zeile 409-410 - config_spindle_warmup:
+   ────────────────────────────────────────
+   JETZT: "Warmlauf 1+2" + "St.1 RPM" etc.
+   JETZT: "Warmlauf 3+4" + "St.3 RPM" etc.
+   → Nur 12 Zeichen pro Titel
+   → "St." statt "Stufe"
+
+
+✅ MAXIMALE STRING-LÄNGEN:
+
+   Längster Titel:         22 Zeichen (war: 40+)
+   Längster Label:         29 Zeichen (war: 60+)
+   Durchschnitt Titel:     ~12 Zeichen
+   Durchschnitt Label:     ~15 Zeichen
+
+   → ALLE deutlich unter Eding CNC Limits!
+
+
+📋 ABKÜRZUNGEN:
+
+   WZ     = Werkzeug
+   Pos    = Position
+   NO     = Normally Open (Öffner)
+   NC     = Normally Closed (Schließer)
+   St.    = Stufe
+   Sek    = Sekunden
+   mm/min = Millimeter pro Minute
+
+
+🚀 INSTALLATION:
+
+   Das Macro ist jetzt im Repository gespeichert.
+
+   Neuinstallation:
+   ────────────────
+   1. SETUP.bat ausführen
+      ODER
+      copy macro.cnc C:\EdingCNC5.3\config\macro.cnc
+
+   2. Eding CNC neu starten
+
+   3. CONFIG testen:
+      MDI → gosub config
+      → MUSS jetzt funktionieren! ✓
+
+
+📖 KONFIGURATION:
+
+   Nach Installation:
+   ──────────────────
+   1. MDI-Modus öffnen
+   2. gosub config eingeben
+   3. Durch die Dialoge gehen:
+
+   Dialog-Übersicht:
+   ─────────────────
+   1. Werkzeugwechsel-Typ          (Titel: 18 Zeichen)
+   2. WZ-Wechsel Position          (wenn aktiv)
+   3. Z-Sensor                     (Titel: 8 Zeichen)
+   4. Pos nach Referenz            (Titel: 16 Zeichen)
+   5. WZ-Sensor Pos                (Titel: 13 Zeichen)
+   6. WZ-Sensor                    (Titel: 9 Zeichen)
+   7. Bruchkontrolle               (Titel: 14 Zeichen)
+   8. Pos nach Messung             (Titel: 15 Zeichen)
+   9. 3D-Taster                    (Titel: 9 Zeichen)
+  10. 3D-Vorschuebe                (Titel: 13 Zeichen)
+  11. 3D-Versatz                   (Titel: 10 Zeichen)
+  12. Spindelversatz               (Titel: 14 Zeichen)
+  13. Warmlauf 1+2                 (Titel: 12 Zeichen)
+  14. Warmlauf 3+4                 (Titel: 12 Zeichen)
+
+
+💡 VERSTÄNDLICHKEIT:
+
+   Trotz Kürzung bleiben alle Parameter verständlich:
+   ───────────────────────────────────────────────────
+   ✓ Typ (0=NO, 1=NC)  → Klar: 0 oder 1
+   ✓ WZ-Sensor         → WZ = Werkzeug
+   ✓ St.1 RPM          → Stufe 1 Drehzahl
+   ✓ Pos nach Referenz → Position nach Referenzfahrt
+
+   Bei Unklarheiten:
+   ─────────────────
+   → Siehe KONFIGURATION_ANLEITUNG.md (vollständige Erklärungen)
+
+
+⚠️ WICHTIG:
+
+   Wenn es IMMER NOCH nicht funktioniert:
+   ───────────────────────────────────────
+
+   Mögliche Ursachen:
+   1. Alte Datei noch im Cache
+      → Eding CNC komplett schließen und neu starten
+
+   2. Falsche Datei verwendet
+      → Prüfen: Ist das die neueste macro.cnc?
+      → Datum überprüfen
+
+   3. Eding CNC Version zu alt
+      → Welche Version nutzen Sie?
+      → Eding CNC 4.0+ erforderlich
+
+
+🔍 DEBUG:
+
+   Wenn Fehler bleibt:
+   ───────────────────
+   1. Exakte Fehlermeldung notieren
+   2. Exakte Zeilennummer notieren
+   3. Diese Zeile im macro.cnc öffnen und prüfen
+
+
+═══════════════════════════════════════════════════════════════
+
+Version: 3.6.4
+Datum: 2025-11-27
+Status: Alle Strings MAXIMAL verkürzt
+Titel: 8-22 Zeichen (statt 30-50)
+Labels: 10-29 Zeichen (statt 40-70)

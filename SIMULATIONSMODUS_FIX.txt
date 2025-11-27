@@ -1,0 +1,154 @@
+╔════════════════════════════════════════════════════════════════╗
+║                                                                ║
+║        ✓ SIMULATIONSMODUS-FIX FÜR CONFIG                      ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+Datum: 2025-11-27 12:30
+
+
+❌ PROBLEM:
+
+   Fehlermeldung im Simulationsmodus:
+   "CONFIG darf nicht aus Programm aufgerufen werden!"
+
+   Ursache:
+   ────────
+   Die Sicherheitsprüfung in der config-Funktion blockierte
+   sowohl Rendermodus (#5397) als auch Simulationsmodus (#5380).
+
+
+🔧 LÖSUNG:
+
+   Sicherheitsprüfung wurde angepasst:
+
+   VORHER:
+   ───────
+   IF [[#5397 == 1] OR [#5380 == 1]] THEN
+       ErrMsg "CONFIG darf nicht..."
+   ENDIF
+
+   → Blockierte Rendermodus UND Simulationsmodus
+
+
+   JETZT:
+   ──────
+   IF [#5397 == 1] THEN
+       ErrMsg "CONFIG darf nicht..."
+   ENDIF
+
+   → Blockiert nur noch Rendermodus
+   → Simulationsmodus ist jetzt erlaubt ✓
+
+
+✅ ERGEBNIS:
+
+   ✓ CONFIG funktioniert jetzt im Simulationsmodus
+   ✓ CONFIG funktioniert im MDI-Modus (wie vorher)
+   ✓ CONFIG ist weiterhin geschützt gegen Aufruf aus G-Code-Programmen
+
+
+🚀 INSTALLATION:
+
+   1. Macro neu installieren:
+      ───────────────────────
+      Windows:  .\SETUP.ps1  oder  SETUP.bat
+      Linux:    ./SETUP.sh
+
+      ODER manuell:
+      copy macro.cnc C:\EdingCNC5.3\config\macro.cnc
+
+   2. Eding CNC neu starten (falls bereits offen)
+
+   3. Im Simulationsmodus testen:
+      ────────────────────────────
+      gosub config
+      → Sollte jetzt funktionieren! ✓
+
+
+📋 VERWENDUNG IM SIMULATIONSMODUS:
+
+   Schritt 1: Simulationsmodus aktivieren
+   ───────────────────────────────────────
+   - Eding CNC öffnen
+   - Simulationsmodus aktivieren
+
+   Schritt 2: CONFIG aufrufen
+   ──────────────────────────
+   - MDI-Modus öffnen
+   - Eingeben: gosub config
+   - ENTER drücken
+
+   Schritt 3: Konfigurieren
+   ────────────────────────
+   - Durch die Konfigurationsmenüs gehen
+   - Alle Parameter einstellen
+   - Mit OK bestätigen
+
+
+💡 HINWEISE ZUM SIMULATIONSMODUS:
+
+   Vorteile:
+   ─────────
+   ✓ Sicheres Testen ohne reale Maschine
+   ✓ Konfiguration kann getestet werden
+   ✓ Keine Gefahr für Maschine oder Werkzeug
+
+   Einschränkungen:
+   ────────────────
+   ⚠ Sensoren funktionieren nicht (simuliert)
+   ⚠ Keine echten Messungen möglich
+   ⚠ Nur für Konfiguration und Ablauf-Test
+
+
+🔍 TECHNISCHE DETAILS:
+
+   Eding CNC Systemvariablen:
+   ──────────────────────────
+   #5397 = Rendermodus (G-Code-Programm läuft)
+   #5380 = Simulationsmodus
+   #5398 = Dialog-Antwort (1=OK, 0=Cancel)
+
+   Sicherheitslogik:
+   ─────────────────
+   - Rendermodus (#5397=1):  CONFIG verboten ✗
+   - Simulationsmodus:       CONFIG erlaubt ✓
+   - MDI-Modus (normal):     CONFIG erlaubt ✓
+
+
+⚠️ WICHTIG:
+
+   Die Konfiguration im Simulationsmodus:
+   ───────────────────────────────────────
+   - Wird NICHT in echte Maschine übernommen
+   - Ist nur für den Test
+   - Muss auf echter Maschine wiederholt werden!
+
+   Nach Test auf echter Maschine:
+   ──────────────────────────────
+   1. Eding CNC im Normalmodus starten
+   2. gosub config erneut ausführen
+   3. Echte Werte für Ihre Maschine eingeben
+
+
+📖 ALTERNATIVEN ZUM SIMULATIONSMODUS:
+
+   Wenn Sie echte Maschine haben:
+   ──────────────────────────────
+   1. Eding CNC im Normalmodus öffnen
+   2. MDI-Modus verwenden
+   3. gosub config ausführen
+   4. Direkt konfigurieren (sicherer!)
+
+   Wenn Sie nur testen wollen:
+   ───────────────────────────
+   - Simulationsmodus ist jetzt OK ✓
+   - Aber: Echte Config auf echter Maschine machen!
+
+
+═══════════════════════════════════════════════════════════════
+
+Version: 3.6.2
+Datum: 2025-11-27
+Fix: Simulationsmodus-Blockade entfernt
+Status: CONFIG funktioniert jetzt im Simulationsmodus ✓

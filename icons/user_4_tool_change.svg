@@ -1,0 +1,29 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Werkzeugwechsel -->
+  <defs>
+    <style>
+      .primary { fill: #E30613; }
+      .secondary { fill: #1A1A1A; }
+      .stroke { stroke: #1A1A1A; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Tool 1 (left) -->
+  <rect class="secondary" x="8" y="16" width="6" height="16" rx="1"/>
+  <path class="secondary" d="M6 32 L16 32 L15 38 L7 38 Z"/>
+
+  <!-- Tool 2 (right) -->
+  <rect class="secondary" x="50" y="16" width="6" height="16" rx="1"/>
+  <path class="secondary" d="M48 32 L58 32 L57 38 L49 38 Z"/>
+
+  <!-- Exchange arrows -->
+  <path class="primary" d="M20 24 L42 24" stroke="#E30613" stroke-width="3" fill="none"/>
+  <polygon class="primary" points="42,20 48,24 42,28"/>
+
+  <path class="primary" d="M44 32 L22 32" stroke="#E30613" stroke-width="3" fill="none"/>
+  <polygon class="primary" points="22,28 16,32 22,36"/>
+
+  <!-- Tool numbers -->
+  <text x="8" y="52" font-family="Arial, sans-serif" font-size="10" font-weight="bold" class="secondary">T1</text>
+  <text x="50" y="52" font-family="Arial, sans-serif" font-size="10" font-weight="bold" class="secondary">T2</text>
+</svg>

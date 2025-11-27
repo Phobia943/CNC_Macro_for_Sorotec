@@ -1,0 +1,101 @@
+╔════════════════════════════════════════════════════════════════╗
+║                                                                ║
+║        KONFIGURATION - SCHNELLSTART                           ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+
+🚀 KONFIGURATION STARTEN:
+
+   1. Eding CNC öffnen
+   2. In MDI-Modus wechseln
+   3. Eingeben:  gosub config
+   4. ENTER drücken
+
+
+📋 WICHTIGSTE PARAMETER:
+
+   Maximale Werkzeuglänge:
+   ───────────────────────
+   Variable: #4503
+   Standard: 150 mm
+   Ändern in: Konfiguration → Werkzeuglängenmessung
+
+   3D-Taster Kugelradius:
+   ──────────────────────
+   Variable: #4546
+   Standard: 2.00 mm
+   ⭐ WICHTIG: Exakt messen!
+   Ändern in: Konfiguration → 3D-Taster
+
+   Sicherheitshöhe Z:
+   ──────────────────
+   Variable: #4506
+   Standard: -5 mm
+   Ändern in: Konfiguration → Werkzeuglängenmessung
+
+
+🔧 KONFIGURATIONSMENÜ:
+
+   gosub config führt durch:
+   ─────────────────────────
+   1. Werkzeugwechsel-Parameter
+   2. Z-Nullpunkt-Parameter
+   3. Werkzeuglängenmessung ⭐
+   4. 3D-Taster-Parameter ⭐
+   5. Spindel-Warmlauf
+
+
+⭐ EMPFOHLENE WERTE (Sorotec Aluline AL1110):
+
+   Werkzeuglängenmessung:
+   ──────────────────────
+   Position X:           100 mm
+   Position Y:           100 mm
+   Sicherheitshöhe Z:    -5 mm
+   Spindelnase bei Z0:   120 mm (MESSEN!)
+   Max. Werkzeuglänge:   150 mm
+   Anfahrvorschub:       1500 mm/min
+   Tastvorschub:         100 mm/min
+
+   3D-Taster:
+   ──────────
+   Sensor-Typ:           1 (Schließer)
+   Tasterlänge:          50.00 mm
+   Kugelradius:          2.00 mm (MESSEN!)
+   Anfahrvorschub:       1000 mm/min
+   Tastvorschub:         50 mm/min
+
+
+💡 PARAMETER DIREKT SETZEN (MDI):
+
+   Maximale Werkzeuglänge ändern:
+   ──────────────────────────────
+   #4503 = 150
+
+   Kugelradius ändern:
+   ───────────────────
+   #4546 = 2
+
+   Parameter anzeigen:
+   ───────────────────
+   Einfach eingeben: #4503
+   → Zeigt aktuellen Wert an
+
+
+⚠️ WICHTIG:
+
+   - Alle Änderungen werden SOFORT aktiv
+   - Konfiguration wird automatisch gespeichert
+   - Bleiben nach Neustart erhalten
+
+
+📖 AUSFÜHRLICHE ANLEITUNG:
+
+   Siehe: KONFIGURATION_ANLEITUNG.md
+
+
+═══════════════════════════════════════════════════════════════
+
+Version: 3.6
+Datum: 2025-11-27

@@ -1,0 +1,26 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Sensor Check -->
+  <defs>
+    <style>
+      .primary { fill: #E30613; }
+      .secondary { fill: #1A1A1A; }
+      .stroke { stroke: #1A1A1A; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Sensor body -->
+  <rect class="secondary" x="18" y="24" width="28" height="20" rx="4"/>
+  <circle class="secondary" cx="32" cy="34" r="6"/>
+  <circle class="primary" cx="32" cy="34" r="3"/>
+
+  <!-- Status indicator LED -->
+  <circle class="primary" cx="40" cy="28" r="2"/>
+
+  <!-- Checkmark -->
+  <circle class="stroke" cx="46" cy="16" r="10" fill="white"/>
+  <path class="primary" d="M42 16 L45 19 L50 12" stroke="#E30613" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Signal waves -->
+  <path class="stroke" d="M32 50 Q32 54 28 56" stroke="#E30613" stroke-width="1.5" opacity="0.6"/>
+  <path class="stroke" d="M32 50 Q32 54 36 56" stroke="#E30613" stroke-width="1.5" opacity="0.6"/>
+</svg>

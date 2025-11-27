@@ -1,6 +1,6 @@
 ;@unit mm
 ;***************************************************************************************
-; SOROTEC Eding CNC Macro V3.6
+; SOROTEC Eding CNC Macro V3.5
 ; Perfektioniert fuer Eding CNC 5.3
 ;***************************************************************************************
 ;
@@ -21,13 +21,6 @@
 ;***************************************************************************************
 ; VERSIONSHISTORIE
 ;***************************************************************************************
-; V3.6  : BUGFIX KRITISCH: G53 Modalgruppen-Syntax Fehler behoben
-;         - 19x Korrektur: G0 G53 -> G53 G0 (falsche Reihenfolge!)
-;         - 3x Korrektur: G53 X/Y ohne G0 -> G53 G0 X/Y
-;         - 2x Optimierung: Redundante G90-Befehle vor G91 G38.2 entfernt
-;         - TOTAL: 24 kritische Syntaxfehler behoben
-;         - Alle 41 G38.2 Befehle verifiziert und korrekt
-;         - Vollstaendiger Analysebericht: SYNTAX_ANALYSIS_REPORT.md
 ; V3.5  : BUGFIX KRITISCH: G1516 Fehler - Fehlende G90/G91 Modal-Befehle bei G38.2
 ;         - user_6: G90 G38.2 fuer absolute Koordinaten (4 Korrekturen Zeilen 1022,1037,1052,1067)
 ;         - user_7: G91 G38.2 konsolidiert fuer relative Koordinaten (7 Korrekturen)
@@ -310,9 +303,8 @@ SUB config
 ;---------------------------------------------------------------------------------------
 
   ; Pruefung: Ist ein Job geladen/aktiv?
-  ; Im Rendermodus (#5397=1) nicht ausfuehren
-  ; Simulationsmodus (#5380=1) ist OK - zum Testen
-  IF [#5397 == 1] THEN
+  ; Im Rendermodus (#5397=1) oder Simulationsmodus (#5380=1) nicht ausfuehren
+  IF [[#5397 == 1] OR [#5380 == 1]] THEN
     ErrMsg "CONFIG darf nicht aus Programmen aufgerufen werden! Bitte per MDI: gosub config"
   ENDIF
 
@@ -339,11 +331,11 @@ SUB config_toolchange
 ; Konfiguration: Werkzeugwechsel-Parameter
 ;---------------------------------------------------------------------------------------
 
-  DlgMsg "Werkzeugwechsel-Typ" "0=Aus, 1=Pos, 2=Pos+Mess" 4520
+  DlgMsg "Werkzeugwechslertyp einstellen" "TYP (0=Ignorieren, 1=Nur Position, 2=Position+Vermessen)" 4520
 
   IF [#5398 == 1] THEN ; OK gedrueckt
     IF [#4520 > 0] THEN ; Wenn Werkzeugwechsel aktiv
-      DlgMsg "WZ-Wechsel Position" "X (mm)" 4521 "Y (mm)" 4522 "Z (mm)" 4523
+      DlgMsg "Werkzeugwechselposition eingeben" "Position X-Achse (mm)" 4521 "Position Y-Achse (mm)" 4522 "Position Z-Achse (mm)" 4523
     ENDIF
   ENDIF
 
@@ -355,7 +347,7 @@ SUB config_znull
 ; Konfiguration: Z-Nullpunkt Messparameter
 ;---------------------------------------------------------------------------------------
 
-  DlgMsg "Z-Sensor" "Typ (0=NO, 1=NC)" 4400 "Hoehe (mm)" 4510 "Anfahrt (mm/min)" 4512 "Tasten (mm/min)" 4513
+  DlgMsg "Z-Nullpunkt Sensor Konfiguration" "Sensor-Typ (0=Oeffner, 1=Schliesser)" 4400 "Tasterhoehe (mm)" 4510 "Anfahrvorschub (mm/min)" 4512 "Tastvorschub (mm/min)" 4513
 
 ENDSUB
 
@@ -366,17 +358,16 @@ SUB config_toollength
 ;---------------------------------------------------------------------------------------
 
   ; Position nach Referenzfahrt
-  DlgMsg "Pos nach Referenz" "X (mm)" 4631 "Y (mm)" 4632 "Z (mm)" 4633
+  DlgMsg "Position nach Referenzfahrt" "Position X (mm)" 4631 "Position Y (mm)" 4632 "Position Z (mm)" 4633
 
   ; Werkzeuglaengensensor Parameter
-  DlgMsg "WZ-Sensor Pos" "X (mm)" 4507 "Y (mm)" 4508 "Sicher Z (mm)" 4506 "Spindel Z0 (mm)" 4509
-  DlgMsg "WZ-Sensor" "Max Laenge (mm)" 4503 "Anfahrt (mm/min)" 4504 "Tasten (mm/min)" 4505
+  DlgMsg "Werkzeuglaengensensor Konfiguration" "Position X-Achse (mm)" 4507 "Position Y-Achse (mm)" 4508 "Sicherheitshoehe Z (mm)" 4506 "Spindelnase ohne WZ bei Z0 (mm)" 4509 "Max. Werkzeuglaenge (mm)" 4503 "Anfahrvorschub (mm/min)" 4504 "Tastvorschub (mm/min)" 4505
 
   ; Bruchkontrolle
-  DlgMsg "Bruchkontrolle" "Aktiv (0/1)" 4529 "Toleranz (mm)" 4528
+  DlgMsg "Bruchkontrolle Einstellungen" "Aktivieren? (0=Nein, 1=Ja)" 4529 "Verschleisstoleranz +/- (mm)" 4528
 
   ; Position nach Messung
-  DlgMsg "Pos nach Messung" "Funktion (0-4)" 4519 "X (mm)" 4524 "Y (mm)" 4525
+  DlgMsg "Position nach Werkzeugmessung" "Funktion (0-4, siehe Doku)" 4519 "Position X (mm)" 4524 "Position Y (mm)" 4525
 
 ENDSUB
 
@@ -388,14 +379,13 @@ SUB config_3dprobe
 ;---------------------------------------------------------------------------------------
 
   ; 3D-Taster Grundparameter
-  DlgMsg "3D-Taster" "Typ (0=NO, 1=NC)" 4544 "Laenge (mm)" 4545 "Radius (mm)" 4546
-  DlgMsg "3D-Vorschuebe" "Anfahrt (mm/min)" 4548 "Tasten (mm/min)" 4549
+  DlgMsg "3D-Taster Konfiguration" "Sensor-Typ (0=Oeffner, 1=Schliesser)" 4544 "Tasterlaenge als Werkzeug (mm)" 4545 "Kugelradius (mm) - WICHTIG!" 4546 "Anfahrvorschub (mm/min)" 4548 "Tastvorschub (mm/min)" 4549
 
   ; Versatz-Werte (werden bei Einzelkanten-Messung automatisch auf 0 gesetzt)
-  DlgMsg "3D-Versatz" "X+ (mm)" 4551 "X- (mm)" 4552 "Y+ (mm)" 4553 "Y- (mm)" 4554
+  DlgMsg "3D-Taster Versatz-Werte" "Versatz X+ (mm)" 4551 "Versatz X- (mm)" 4552 "Versatz Y+ (mm)" 4553 "Versatz Y- (mm)" 4554
 
   ; Spindelversatz (falls Taster nicht genau in Spindelmitte)
-  DlgMsg "Spindelversatz" "Aktiv (0/1)" 4560 "X (mm)" 4561 "Y (mm)" 4562
+  DlgMsg "Spindelversatz (falls Taster exzentrisch)" "Versatz beruecksichtigen? (0=Nein, 1=Ja)" 4560 "Spindelversatz X (mm)" 4561 "Spindelversatz Y (mm)" 4562
 
 ENDSUB
 
@@ -406,8 +396,7 @@ SUB config_spindle_warmup
 ; Der Warmlauf erfolgt in 4 Stufen mit steigender Drehzahl
 ;---------------------------------------------------------------------------------------
 
-  DlgMsg "Warmlauf 1+2" "St.1 RPM" 4532 "St.1 Sek" 4533 "St.2 RPM" 4534 "St.2 Sek" 4535
-  DlgMsg "Warmlauf 3+4" "St.3 RPM" 4536 "St.3 Sek" 4537 "St.4 RPM" 4538 "St.4 Sek" 4539
+  DlgMsg "Spindelwarmlauf Parameter" "Drehzahl Stufe 1 (RPM)" 4532 "Laufzeit Stufe 1 (Sek)" 4533 "Drehzahl Stufe 2 (RPM)" 4534 "Laufzeit Stufe 2 (Sek)" 4535 "Drehzahl Stufe 3 (RPM)" 4536 "Laufzeit Stufe 3 (Sek)" 4537 "Drehzahl Stufe 4 (RPM)" 4538 "Laufzeit Stufe 4 (Sek)" 4539
 
 ENDSUB
 
@@ -453,8 +442,7 @@ SUB user_1 ; Werkzeuglaengenmessung
   ; Pruefung: Ist Werkzeug ein 3D-Taster?
   ; Werkzeuge 98 und 99 sind reserviert fuer 3D-Taster
   IF [#5008 > 97] THEN
-    msg "Werkzeug ist 3D-Taster"
-    msg "Laengenmessung nicht erforderlich"
+    msg "Werkzeug ist 3D-Taster -> Laengenmessung nicht erforderlich"
     M30
   ENDIF
 
@@ -463,24 +451,24 @@ SUB user_1 ; Werkzeuglaengenmessung
 
   ; Benutzer nach geschaetzter Werkzeuglaenge fragen
   msg "Werkzeug wird vermessen"
-  DlgMsg "Werkzeug vermessen?" "Geschaetzte Laenge (mm):" 5017
+  DlgMsg "Werkzeug vermessen?" "Geschaetzte Werkzeuglaenge ca. (mm):" 5017
 
   IF [[#5398 == 1] AND [#5397 == 0]] THEN ; OK gedrueckt UND nicht im Rendermodus
 
     ; Sicherheitspruefung 1: Werkzeuglaenge muss positiv sein
     IF [#5017 <= 0] THEN
-      DlgMsg "WARNUNG: Laenge muss positiv sein" "Eingegebene Laenge:" 5017
+      DlgMsg "!!! WARNUNG: Werkzeuglaenge muss positiv sein !!!" "Eingegebene Laenge:" 5017
     ENDIF
 
     ; Sicherheitspruefung 2: Werkzeug darf nicht zu lang sein
     ; Berechnung: Spindelnase-Position + Werkzeuglaenge + Sicherheit(10mm) < Max.Hoehe
     IF [[#4509 + #5017 + 10] > [#4506]] THEN
-      DlgMsg "WARNUNG: Werkzeug zu lang!" "Eingegebene Laenge:" 5017
+      DlgMsg "!!! WARNUNG: Werkzeug zu lang fuer Maschine !!!" "Eingegebene Laenge:" 5017
     ENDIF
 
     ; Wenn immer noch ungueltige Eingabe: Abbruch
     IF [[#5017 <= 0] OR [[#4509 + #5017 + 10] > [#4506]]] THEN
-      ErrMsg "WZ-Messung abgebrochen - Ungueltige Laenge"
+      ErrMsg "Werkzeuglaengenmessung abgebrochen - Ungueltige Laenge"
     ENDIF
 
     ; Spindel und Kuehlung ausschalten (Sicherheit!)
@@ -508,7 +496,7 @@ SUB user_1 ; Werkzeuglaengenmessung
       IF [#5067 == 1] THEN ; Sensor erneut gefunden
 
         ; Sicher nach oben fahren
-        G53 G0 Z[#4506]
+        G0 G53 Z[#4506]
 
         ; Werkzeugtabelle auf 0 setzen (Direktvermessung)
         #[5400 + #5016] = 0
@@ -538,30 +526,30 @@ SUB user_1 ; Werkzeuglaengenmessung
 
           ; Zu konfigurierter Position fahren (abhaengig von #4519)
           IF [#4518 == 1] THEN                    ; Sonderfall: Zurueck zur alten Position
-            G53 G0 Z[#4506]
-            G53 G0 X[#4514] Y[#4515]
+            G0 G53 Z[#4506]
+            G0 G53 X[#4514] Y[#4515]
             #4518 = 0
 
           ELSE                                    ; Normal: Konfigurierte Position anfahren
 
             IF [#4519 == 0] THEN                  ; 0 = Vordefinierter Punkt
-              G53 G0 Z[#4506]
-              G53 G0 X[#4524] Y[#4525]
+              G0 G53 Z[#4506]
+              G0 G53 X[#4524] Y[#4525]
             ENDIF
 
             IF [#4519 == 1] THEN                  ; 1 = Werkstuecknullpunkt
-              G53 G0 Z[#4506]
+              G0 G53 Z[#4506]
               G0 X0 Y0
             ENDIF
 
             IF [#4519 == 2] THEN                  ; 2 = Werkzeugwechselposition
-              G53 G0 Z[#4523]
-              G53 G0 X[#4521] Y[#4522]
+              G0 G53 Z[#4523]
+              G0 G53 X[#4521] Y[#4522]
             ENDIF
 
             IF [#4519 == 3] THEN                  ; 3 = Maschinennullpunkt
-              G53 G0 Z[#4506]
-              G53 G0 X0 Y0
+              G0 G53 Z[#4506]
+              G0 G53 X0 Y0
             ENDIF
 
             ; Wenn #4519 == 4: Stehen bleiben (nichts tun)
@@ -714,22 +702,22 @@ SUB user_3 ; Spindel-Warmlauf
     G53 G0 Z0
 
     ; Stufe 1
-    msg "Warmlauf 1: " #4532 " RPM, " #4533 " s"
+    msg "Warmlauf Stufe 1: " #4532 " RPM fuer " #4533 " Sekunden"
     M03 S[#4532]
     G04 P[#4533]
 
     ; Stufe 2
-    msg "Warmlauf 2: " #4534 " RPM, " #4535 " s"
+    msg "Warmlauf Stufe 2: " #4534 " RPM fuer " #4535 " Sekunden"
     M03 S[#4534]
     G04 P[#4535]
 
     ; Stufe 3
-    msg "Warmlauf 3: " #4536 " RPM, " #4537 " s"
+    msg "Warmlauf Stufe 3: " #4536 " RPM fuer " #4537 " Sekunden"
     M03 S[#4536]
     G04 P[#4537]
 
     ; Stufe 4
-    msg "Warmlauf 4: " #4538 " RPM, " #4539 " s"
+    msg "Warmlauf Stufe 4: " #4538 " RPM fuer " #4539 " Sekunden"
     M03 S[#4538]
     G04 P[#4539]
 
@@ -863,7 +851,7 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
         G91 G0 X-1
         G90
 
-        msg "X+ Kante OK, Nullpkt gesetzt (R komp.)"
+        msg "X+ Kante gemessen, Nullpunkt gesetzt (Radius kompensiert)"
       ELSE
         ErrMsg "FEHLER: Kante nicht gefunden (Feinmessung)"
       ENDIF
@@ -897,7 +885,7 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
         G91 G0 X1
         G90
 
-        msg "X- Kante OK, Nullpkt gesetzt (R komp.)"
+        msg "X- Kante gemessen, Nullpunkt gesetzt (Radius kompensiert)"
       ELSE
         ErrMsg "FEHLER: Kante nicht gefunden (Feinmessung)"
       ENDIF
@@ -935,7 +923,7 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
         G91 G0 Y-1
         G90
 
-        msg "Y+ Kante OK, Nullpkt gesetzt (R komp.)"
+        msg "Y+ Kante gemessen, Nullpunkt gesetzt (Radius kompensiert)"
       ELSE
         ErrMsg "FEHLER: Kante nicht gefunden (Feinmessung)"
       ENDIF
@@ -969,7 +957,7 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
         G91 G0 Y1
         G90
 
-        msg "Y- Kante OK, Nullpkt gesetzt (R komp.)"
+        msg "Y- Kante gemessen, Nullpunkt gesetzt (Radius kompensiert)"
       ELSE
         ErrMsg "FEHLER: Kante nicht gefunden (Feinmessung)"
       ENDIF
@@ -1126,9 +1114,9 @@ SUB user_6 ; Ecken-Antastung mit Rotationsberechnung (2 Kanten)
                     ; Rotation anwenden wenn gewaehlt
                     IF [#3503 == 1] THEN
                       G68 R[#2007]
-                      msg "Nullpkt gesetzt, Rotation " #2007 " Grad"
+                      msg "Nullpunkt gesetzt und Rotation " #2007 " Grad angewendet"
                     ELSE
-                      msg "Nullpkt gesetzt, keine Rotation"
+                      msg "Nullpunkt gesetzt, Rotation NICHT angewendet"
                     ENDIF
 
                   ELSE
@@ -1258,8 +1246,7 @@ SUB user_7 ; Loch-Antastung (Mittelpunkt finden)
             ; Zurueck zur Mitte
             G0 X0 Y0
 
-            msg "Lochmitte gefunden"
-            msg "Durchm. X=" #107 " Y=" #108 " mm"
+            msg "Lochmitte gefunden - Durchmesser X=" #107 " mm, Durchmesser Y=" #108 " mm"
 
           ELSE
             ErrMsg "Messfehler: Loch Y+ nicht gefunden"
@@ -1351,6 +1338,7 @@ SUB user_8 ; Zylinder/Boss-Antastung (Aussenmittelpunkt)
         G0 Y[#101 + #102 / 2]
         G91
         G0 Z-[#102]
+        G90
         G91 G38.2 Y[#102] F[#4548]
         G90
 
@@ -1362,6 +1350,7 @@ SUB user_8 ; Zylinder/Boss-Antastung (Aussenmittelpunkt)
           G0 Z[#4511]
           G0 Y-[#102]
           G0 Z-[#102]
+          G90
           G91 G38.2 Y-[#102] F[#4548]
           G90
 
@@ -1375,8 +1364,7 @@ SUB user_8 ; Zylinder/Boss-Antastung (Aussenmittelpunkt)
             G90
             G0 Y0
 
-            msg "Zylindermitte gefunden"
-            msg "Maschine auf Mittelpunkt"
+            msg "Zylindermitte gefunden - Maschine steht auf Mittelpunkt"
 
           ELSE
             ErrMsg "Messfehler: Zylinder Y- nicht gefunden"
@@ -1455,15 +1443,14 @@ SUB user_9 ; Werkzeug-Bruchkontrolle
         #4501 = [#5053 - #4509]
 
         ; Nach oben fahren
-        G53 G0 Z[#4506]
+        G0 G53 Z[#4506]
 
         ; Toleranzpruefung
         ; Ist Abweichung innerhalb Toleranz?
         IF [[[#5021 + #4528] > [#4501]] AND [[#5021 - #4528] < [#4501]]] THEN
 
           ; Werkzeug OK
-          msg "Bruchkontrolle OK"
-          msg "Abweichung: " [#5021 - #4501] " mm"
+          msg "Bruchkontrolle OK - Abweichung: " [#5021 - #4501] " mm"
 
         ELSE
 
@@ -1490,27 +1477,27 @@ SUB user_9 ; Werkzeug-Bruchkontrolle
         IF [#3504 == 0] THEN
 
           IF [#4519 == 0] THEN       ; Vordefinierter Punkt
-            G53 G0 Z[#4506]
-            G53 G0 X[#4524]
-            G53 G0 Y[#4525]
+            G0 G53 Z[#4506]
+            G0 G53 X[#4524]
+            G0 G53 Y[#4525]
           ENDIF
 
           IF [#4519 == 1] THEN       ; Werkstuecknullpunkt
-            G53 G0 Z[#4506]
+            G0 G53 Z[#4506]
             G0 X0
             G0 Y0
           ENDIF
 
           IF [#4519 == 2] THEN       ; Werkzeugwechselposition
-            G53 G0 Z[#4523]
-            G53 G0 X[#4521]
-            G53 G0 Y[#4522]
+            G0 G53 Z[#4523]
+            G0 G53 X[#4521]
+            G0 G53 Y[#4522]
           ENDIF
 
           IF [#4519 == 3] THEN       ; Maschinennullpunkt
-            G53 G0 Z[#4506]
-            G53 G0 X0
-            G53 G0 Y0
+            G0 G53 Z[#4506]
+            G53 X0
+            G53 Y0
           ENDIF
 
           ; Wenn #4519 == 4: Stehen bleiben
@@ -1721,29 +1708,26 @@ SUB user_10 ; Vier-Kanten-Rechteck-Vermessung
 
                     ; === ERGEBNISSE ANZEIGEN ===
                     IF [#2106 == 0] THEN
-                      msg "Rechteck-Vermessung OK"
-                      msg "Ist X: " #2100 " Soll: " #1100
-                      msg "Abw X: " #2104 " mm"
-                      msg "Ist Y: " #2101 " Soll: " #1101
-                      msg "Abw Y: " #2105 " mm"
-                      msg "Mitte X: " #2102 " Y: " #2103
-                      msg "Toleranz " #4600 " mm OK"
+                      msg "=== RECHTECK-VERMESSUNG ERFOLGREICH ==="
+                      msg "Ist-Laenge X:  " #2100 " mm (Soll: " #1100 " mm, Abw: " #2104 " mm)"
+                      msg "Ist-Breite Y:  " #2101 " mm (Soll: " #1101 " mm, Abw: " #2105 " mm)"
+                      msg "Mittelpunkt X: " #2102 " mm"
+                      msg "Mittelpunkt Y: " #2103 " mm"
+                      msg "Massabweichung innerhalb Toleranz (" #4600 " mm)"
 
                       DlgMsg "Rechteck vermessen - Alle Masse OK!" "Ist-Laenge X: " 2100 "Soll-Laenge X: " 1100 "Abweichung X: " 2104 "Ist-Breite Y: " 2101 "Soll-Breite Y: " 1101 "Abweichung Y: " 2105
 
                     ELSE
-                      warnmsg "MASSABWEICHUNG ZU GROSS!"
-                      msg "X Ist: " #2100 " Soll: " #1100
-                      msg "X Abw: " #2104 " mm"
-                      msg "Y Ist: " #2101 " Soll: " #1101
-                      msg "Y Abw: " #2105 " mm"
-                      msg "Max.Tol: " #4600 " mm"
+                      msg "!!! WARNUNG: MASSABWEICHUNG ZU GROSS !!!"
+                      msg "Ist-Laenge X:  " #2100 " mm (Soll: " #1100 " mm, Abw: " #2104 " mm)"
+                      msg "Ist-Breite Y:  " #2101 " mm (Soll: " #1101 " mm, Abw: " #2105 " mm)"
+                      msg "Toleranz: " #4600 " mm"
 
                       DlgMsg "WARNUNG: Massabweichung zu gross!" "Ist-Laenge X: " 2100 "Soll-Laenge X: " 1100 "Abweichung X: " 2104 "Ist-Breite Y: " 2101 "Soll-Breite Y: " 1101 "Abweichung Y: " 2105 "Max. Toleranz: " 4600
                     ENDIF
 
                     ; === NULLPUNKT AUF MITTELPUNKT SETZEN ===
-                    msg "Setze Nullpkt auf Rechteck-Mitte..."
+                    msg "Setze Nullpunkt auf Rechteck-Mittelpunkt..."
 
                     ; Zu Mittelpunkt fahren (relativ)
                     G91
@@ -1754,8 +1738,7 @@ SUB user_10 ; Vier-Kanten-Rechteck-Vermessung
                     ; Nullpunkt setzen
                     G92 X0 Y0
 
-                    msg "Nullpunkt gesetzt"
-                    msg "Maschine auf Rechteck-Mitte"
+                    msg "Nullpunkt gesetzt - Maschine steht auf Rechteck-Mittelpunkt"
 
                   ELSE
                     ErrMsg "Messfehler: Y- Kante nicht gefunden (Feinmessung)"
@@ -1943,20 +1926,20 @@ SUB user_11 ; Werkstueck-Dicken-Messung
 
               ; === ERGEBNISSE ANZEIGEN ===
               IF [ABS[#2111] <= #4610] THEN
-                msg "Dicken-Messung OK"
-                msg "Ist:  " #2110 " mm"
-                msg "Soll: " #1110 " mm"
-                msg "Abw:  " #2111 " mm"
-                msg "Toleranz " #4610 " mm OK"
+                msg "=== DICKEN-MESSUNG ERFOLGREICH ==="
+                msg "Ist-Dicke:   " #2110 " mm"
+                msg "Soll-Dicke:  " #1110 " mm"
+                msg "Abweichung:  " #2111 " mm"
+                msg "Dicke innerhalb Toleranz (" #4610 " mm)"
 
                 DlgMsg "Dicken-Messung erfolgreich - Masse OK!" "Ist-Dicke: " 2110 "Soll-Dicke: " 1110 "Abweichung: " 2111 "Toleranz: " 4610
 
               ELSE
-                warnmsg "DICKEN-ABWEICHUNG ZU GROSS!"
-                msg "Ist:  " #2110 " mm"
-                msg "Soll: " #1110 " mm"
-                msg "Abw:  " #2111 " mm"
-                msg "Max.Tol: " #4610 " mm"
+                msg "!!! WARNUNG: DICKEN-ABWEICHUNG ZU GROSS !!!"
+                msg "Ist-Dicke:   " #2110 " mm"
+                msg "Soll-Dicke:  " #1110 " mm"
+                msg "Abweichung:  " #2111 " mm"
+                msg "Toleranz:    " #4610 " mm"
 
                 DlgMsg "WARNUNG: Dicken-Abweichung zu gross!" "Ist-Dicke: " 2110 "Soll-Dicke: " 1110 "Abweichung: " 2111 "Max. Toleranz: " 4610
               ENDIF
@@ -2149,7 +2132,7 @@ SUB user_12 ; Koordinatensystem-Manager (G54-G59)
   ; === FUNKTION 3: ANZEIGEN ===
   IF [#1120 == 3] THEN
 
-    msg "Gespeicherte Koord.systeme:"
+    msg "=== GESPEICHERTE KOORDINATENSYSTEME ==="
     msg " "
     msg "G54: X=" #5221 " Y=" #5222 " Z=" #5223
     msg "G55: X=" #5231 " Y=" #5232 " Z=" #5233
@@ -2220,7 +2203,7 @@ SUB user_12 ; Koordinatensystem-Manager (G54-G59)
     msg "Maschinenkoordinaten:"
     msg "X=" #5071 " Y=" #5072 " Z=" #5073
     msg " "
-    msg "Hinweis: Koord.system pruefen"
+    msg "Hinweis: Aktives Koordinatensystem in Eding CNC Status pruefen"
 
     DlgMsg "=== AKTUELLE POSITION ===" "Arbeits-X:" 5001 "Arbeits-Y:" 5002 "Arbeits-Z:" 5003 "Maschinen-X:" 5071 "Maschinen-Y:" 5072 "Maschinen-Z:" 5073
 
@@ -2386,7 +2369,7 @@ SUB change_tool
     ; ========================================================================
     IF [#5015 == 1] THEN
 
-      msg "WZ " #5008 " -> WZ " #5011 " gewechselt"
+      msg "Werkzeug " #5008 " wird mit Werkzeug " #5011 " gewechselt"
 
       M6 T[#5011]  ; Werkzeugnummer setzen
 
@@ -2515,12 +2498,12 @@ SUB zero_set_rotation ; Rotation durch 2-Punkt-Messung
 ; 4. Wendet G68 Rotation an
 ;---------------------------------------------------------------------------------------
 
-  msg "Ersten Punkt antasten, dann STRG+G"
+  msg "Ersten Punkt antasten und mit STRG + G fortfahren"
   M0
   #5020 = #5071  ; X1
   #5021 = #5072  ; Y1
 
-  msg "Zweiten Punkt antasten, dann STRG+G"
+  msg "Zweiten Punkt antasten und mit STRG + G fortfahren"
   M0
   #5022 = #5071  ; X2
   #5023 = #5072  ; Y2

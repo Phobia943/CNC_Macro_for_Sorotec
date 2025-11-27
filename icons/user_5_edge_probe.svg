@@ -1,0 +1,25 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Einzelkanten-Antastung -->
+  <defs>
+    <style>
+      .primary { fill: #E30613; }
+      .secondary { fill: #1A1A1A; }
+      .stroke { stroke: #1A1A1A; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Workpiece -->
+  <rect class="secondary" x="38" y="18" width="20" height="36" rx="2"/>
+
+  <!-- Probe -->
+  <circle class="primary" cx="28" cy="36" r="6"/>
+  <line class="stroke" x1="22" y1="36" x2="8" y2="36"/>
+  <rect class="secondary" x="6" y="32" width="4" height="8"/>
+
+  <!-- Direction arrow -->
+  <path class="primary" d="M28 36 L34 36" stroke="#E30613" stroke-width="2" fill="none"/>
+  <polygon class="primary" points="34,33 38,36 34,39"/>
+
+  <!-- Edge indicators -->
+  <line class="stroke" x1="38" y1="12" x2="38" y2="60" stroke-dasharray="4,2" opacity="0.5"/>
+</svg>

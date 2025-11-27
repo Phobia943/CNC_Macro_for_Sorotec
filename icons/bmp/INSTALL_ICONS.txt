@@ -1,0 +1,102 @@
+╔════════════════════════════════════════════════════════════════╗
+║                                                                ║
+║        BMP ICONS - INSTALLATIONS-ANLEITUNG                     ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+✅ ALLE 12 BMP-ICONS WURDEN ERFOLGREICH ERSTELLT!
+
+📁 Aktueller Speicherort:
+   icons/bmp/
+
+📋 Erstellte Dateien (UX.bmp Schema):
+
+   ✓ U1.bmp   → user_1:  Werkzeuglängenmessung
+   ✓ U2.bmp   → user_2:  Z-Nullpunktermittlung
+   ✓ U3.bmp   → user_3:  Spindel-Warmlauf
+   ✓ U4.bmp   → user_4:  Werkzeugwechsel
+   ✓ U5.bmp   → user_5:  Einzelkanten-Antastung
+   ✓ U6.bmp   → user_6:  Ecken + Rotation
+   ✓ U7.bmp   → user_7:  Loch-Antastung
+   ✓ U8.bmp   → user_8:  Zylinder-Antastung
+   ✓ U9.bmp   → user_9:  Werkzeug-Bruchkontrolle
+   ✓ U10.bmp  → user_10: Rechteck-Vermessung
+   ✓ U11.bmp  → user_11: Dicken-Messung
+   ✓ U12.bmp  → user_12: Koordinatensystem-Manager
+
+
+🎯 TECHNISCHE SPEZIFIKATIONEN:
+
+   Format:      Windows 3.x BMP (24-bit RGB)
+   Größe:       64 x 64 Pixel
+   Farbtiefe:   24-bit True Color
+   Dateigröße:  ~13 KB pro Icon
+   Kompression: Keine
+
+
+🚀 INSTALLATIONS-SCHRITTE:
+
+   Windows (vom WSL aus):
+   ──────────────────────
+   cp *.bmp /mnt/c/EdingCNC5.3/icons/op_f_key/user/
+
+   Windows (direkt in CMD/PowerShell):
+   ───────────────────────────────────
+   1. Navigieren Sie zu diesem Verzeichnis in Windows Explorer
+   2. Markieren Sie alle U*.bmp Dateien
+   3. Kopieren Sie die Dateien nach:
+      C:\EdingCNC5.3\icons\op_f_key\user\
+
+   Alternative (PowerShell):
+   ─────────────────────────
+   Copy-Item *.bmp C:\EdingCNC5.3\icons\op_f_key\user\ -Force
+
+
+📂 ZIEL-VERZEICHNIS:
+
+   C:\EdingCNC5.3\icons\op_f_key\user\
+   ├── U1.bmp
+   ├── U2.bmp
+   ├── U3.bmp
+   ├── U4.bmp
+   ├── U5.bmp
+   ├── U6.bmp
+   ├── U7.bmp
+   ├── U8.bmp
+   ├── U9.bmp
+   ├── U10.bmp
+   ├── U11.bmp
+   └── U12.bmp
+
+
+✅ NACH DER INSTALLATION:
+
+   1. ✓ Prüfen Sie, dass alle 12 BMP-Dateien kopiert wurden
+   2. ✓ Starten Sie Eding CNC neu
+   3. ✓ Öffnen Sie das Macro-Menü
+   4. ✓ Die Icons sollten nun neben den Funktionen erscheinen
+
+
+⚠️ WICHTIG:
+
+   - Eding CNC muss während der Installation GESCHLOSSEN sein
+   - Dateien müssen exakt UX.bmp benannt sein (nicht UX.bmp.bmp)
+   - Der Pfad icons/op_f_key/user/ muss existieren
+   - Nach dem Kopieren: Eding CNC neu starten
+
+
+💡 TIPP:
+
+   Falls die Icons nicht erscheinen:
+   1. Prüfen Sie den Pfad: C:\EdingCNC5.3\icons\op_f_key\user\
+   2. Prüfen Sie die Dateinamen (müssen U1.bmp, U2.bmp, ... sein)
+   3. Starten Sie Eding CNC komplett neu
+   4. Prüfen Sie die BMP-Eigenschaften (64x64, 24-bit)
+
+
+═══════════════════════════════════════════════════════════════
+
+Datum:    2025-11-27
+Version:  1.0
+Format:   BMP 64x64, 24-bit RGB
+Erstellt: cairosvg (Excellent quality)

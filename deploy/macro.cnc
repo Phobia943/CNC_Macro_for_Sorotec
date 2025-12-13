@@ -161,10 +161,7 @@
 ;
 ; Werkstueck-Antastung (#4550-#4566)
 ; #4550         Richtungs-Merker (1=X+, 2=X-, 3=Y+, 4=Y-)
-; #4551         Versatz X+ (wird auf 0 gesetzt bei Kantenmessung)
-; #4552         Versatz X- (wird auf 0 gesetzt bei Kantenmessung)
-; #4553         Versatz Y+ (wird auf 0 gesetzt bei Kantenmessung)
-; #4554         Versatz Y- (wird auf 0 gesetzt bei Kantenmessung)
+; #4551-#4554   UNBENUTZT (ehemals Versatz-Werte)
 ; #4560         Spindelversatz beruecksichtigen? (1=JA)
 ; #4561         Spindelversatz X
 ; #4562         Spindelversatz Y
@@ -259,7 +256,7 @@ SUB check_sensor_connected
         ErrMsg "Messung abgebrochen -> Sensor Error"
       ENDIF
     ELSE                     ; Cancel gedrueckt
-      ErrMsg "Messung abgebrochen -> Sensor Error"
+      ErrMsg "Messung abgebrochen -> Sensor Error
     ENDIF
   ENDIF
 
@@ -391,8 +388,6 @@ SUB config_3dprobe
   DlgMsg "3D-Taster" "Typ (0=NO, 1=NC)" 4544 "Laenge (mm)" 4545 "Radius (mm)" 4546
   DlgMsg "3D-Vorschuebe" "Anfahrt (mm/min)" 4548 "Tasten (mm/min)" 4549
 
-  ; Versatz-Werte (werden bei Einzelkanten-Messung automatisch auf 0 gesetzt)
-  DlgMsg "3D-Versatz" "X+ (mm)" 4551 "X- (mm)" 4552 "Y+ (mm)" 4553 "Y- (mm)" 4554
 
   ; Spindelversatz (falls Taster nicht genau in Spindelmitte)
   DlgMsg "Spindelversatz" "Aktiv (0/1)" 4560 "X (mm)" 4561 "Y (mm)" 4562
@@ -823,11 +818,11 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
 
   ; SCHRITT 2: Richtung auswaehlen
   IF [#1200 == 1] THEN
-    DlgMsg "X-Achse - Richtung waehlen" "1 = X+ (rechts) / 2 = X- (links)" 1201
+    DlgMsg "X-Richtung" "1=X+ (re) 2=X- (li)" 1201
   ENDIF
 
   IF [#1200 == 2] THEN
-    DlgMsg "Y-Achse - Richtung waehlen" "1 = Y+ (vorne) / 2 = Y- (hinten)" 1201
+    DlgMsg "Y-Richtung" "1=Y+ (vor) 2=Y- (hint)" 1201
   ENDIF
 
   IF [#5398 == -1] THEN ; Cancel gedrueckt
@@ -2247,7 +2242,7 @@ SUB change_tool
 ; SICHERHEIT:
 ; - Spindel/Kuehlung werden ausgeschaltet
 ; - Werkzeugnummer 1-99 Validierung
-; - Optional: Bruchkontrolle vor Wechsel (#4529)
+; - Optional: Bruchkontrolle vor Wechsel
 ; - Nicht im Rendermodus ausfuehrbar
 ;
 ; VARIABLEN:

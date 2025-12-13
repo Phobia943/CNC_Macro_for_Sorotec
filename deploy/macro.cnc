@@ -256,7 +256,7 @@ SUB check_sensor_connected
         ErrMsg "Messung abgebrochen -> Sensor Error"
       ENDIF
     ELSE                     ; Cancel gedrueckt
-      ErrMsg "Messung abgebrochen -> Sensor Error
+      ErrMsg "Messung abgebrochen -> Sensor Error"
     ENDIF
   ENDIF
 
@@ -1110,7 +1110,8 @@ SUB user_6 ; Ecken-Antastung mit Rotationsberechnung (2 Kanten)
                   #2007 = ATAN[[#1042 - #1032] / [#1041 - #1031]]
 
                   ; === BENUTZER FRAGEN OB ROTATION ANWENDEN ===
-                  DlgMsg "Die errechnete Rotation liegt bei " #2007 " Grad. Soll ich diese anwenden oder ignorieren?" "1=Anwenden / 0=Ignorieren" 3503
+                  msg "Errechnete Rotation: " #2007 " Grad"
+                  DlgMsg "Rotation anwenden? (siehe Message)" "1=Anwenden / 0=Ignorieren" 3503
 
                   IF [#5398 == 1] THEN
 
@@ -2242,7 +2243,7 @@ SUB change_tool
 ; SICHERHEIT:
 ; - Spindel/Kuehlung werden ausgeschaltet
 ; - Werkzeugnummer 1-99 Validierung
-; - Optional: Bruchkontrolle vor Wechsel
+; - Optional: Bruchkontrolle vor Wechsel (#4529)
 ; - Nicht im Rendermodus ausfuehrbar
 ;
 ; VARIABLEN:

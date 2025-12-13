@@ -1,0 +1,26 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Werkzeuglaengenmessung -->
+  <defs>
+    <style>
+      .primary { fill: #E30613; }
+      .secondary { fill: #1A1A1A; }
+      .stroke { stroke: #1A1A1A; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Tool/Cutter -->
+  <rect class="secondary" x="28" y="8" width="8" height="24" rx="1"/>
+  <path class="secondary" d="M24 32 L40 32 L38 40 L26 40 Z"/>
+
+  <!-- Measurement sensor -->
+  <rect class="primary" x="18" y="44" width="28" height="12" rx="2"/>
+  <circle class="secondary" cx="32" cy="50" r="3"/>
+
+  <!-- Measurement lines -->
+  <line class="stroke" x1="12" y1="32" x2="52" y2="32"/>
+  <line class="stroke" x1="12" y1="44" x2="12" y2="32"/>
+  <line class="stroke" x1="52" y1="44" x2="52" y2="32"/>
+
+  <!-- Arrow indicator -->
+  <path class="primary" d="M32 18 L28 14 L32 10 L36 14 Z"/>
+</svg>

@@ -1,0 +1,19 @@
+; Eding CNC - Benutzermakro Namen und Beschreibungen
+; Diese Datei definiert die Anzeigenamen für die Benutzermakros
+; Format: user_X=Anzeigename
+;
+; Version: 3.6
+; Datum: 2025-11-27
+
+user_1=Werkzeuglaengenmessung
+user_2=Z-Nullpunkt setzen
+user_3=Spindel Warmlauf
+user_4=Werkzeugwechsel
+user_5=Einzelkante antasten
+user_6=Ecke + Rotation
+user_7=Loch-Mittelpunkt
+user_8=Zylinder-Mittelpunkt
+user_9=Werkzeug-Bruchkontrolle
+user_10=Rechteck vermessen
+user_11=Dicke messen
+user_12=Koordinaten-Manager

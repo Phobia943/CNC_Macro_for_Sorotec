@@ -823,11 +823,11 @@ SUB user_5 ; Einzelkanten-Antastung (mit automatischer Nullpunktsetzung)
 
   ; SCHRITT 2: Richtung auswaehlen
   IF [#1200 == 1] THEN
-    DlgMsg "X-Achse - Richtung waehlen" "1 = X+ (rechts) / 2 = X- (links)" 1201
+    DlgMsg "X-Richtung" "1=X+ (re) 2=X- (li)" 1201
   ENDIF
 
   IF [#1200 == 2] THEN
-    DlgMsg "Y-Achse - Richtung waehlen" "1 = Y+ (vorne) / 2 = Y- (hinten)" 1201
+    DlgMsg "Y-Richtung" "1=Y+ (vor) 2=Y- (hint)" 1201
   ENDIF
 
   IF [#5398 == -1] THEN ; Cancel gedrueckt

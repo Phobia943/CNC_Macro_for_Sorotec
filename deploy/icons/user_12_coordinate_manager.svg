@@ -1,0 +1,35 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Koordinatensystem-Manager G54-G59 -->
+  <defs>
+    <style>
+      .primary { fill: #E30613; }
+      .secondary { fill: #1A1A1A; }
+      .stroke { stroke: #1A1A1A; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Grid -->
+  <line class="stroke" x1="8" y1="16" x2="56" y2="16" opacity="0.3"/>
+  <line class="stroke" x1="8" y1="28" x2="56" y2="28" opacity="0.3"/>
+  <line class="stroke" x1="8" y1="40" x2="56" y2="40" opacity="0.3"/>
+  <line class="stroke" x1="8" y1="52" x2="56" y2="52" opacity="0.3"/>
+  <line class="stroke" x1="16" y1="8" x2="16" y2="56" opacity="0.3"/>
+  <line class="stroke" x1="28" y1="8" x2="28" y2="56" opacity="0.3"/>
+  <line class="stroke" x1="40" y1="8" x2="40" y2="56" opacity="0.3"/>
+  <line class="stroke" x1="52" y1="8" x2="52" y2="56" opacity="0.3"/>
+
+  <!-- Main axes -->
+  <line class="primary" x1="8" y1="32" x2="56" y2="32" stroke="#E30613" stroke-width="2"/>
+  <path class="primary" d="M56 32 L52 28 L52 36 Z"/>
+  <line class="primary" x1="32" y1="56" x2="32" y2="8" stroke="#E30613" stroke-width="2"/>
+  <path class="primary" d="M32 8 L28 12 L36 12 Z"/>
+
+  <!-- Coordinate systems indicators -->
+  <circle class="stroke" cx="20" cy="20" r="2" fill="#E30613" opacity="0.7"/>
+  <circle class="stroke" cx="44" cy="20" r="2" fill="#E30613" opacity="0.4"/>
+  <circle class="stroke" cx="20" cy="44" r="2" fill="#E30613" opacity="0.4"/>
+
+  <!-- G-code text -->
+  <text x="46" y="48" font-family="Arial, sans-serif" font-size="8" font-weight="bold" class="secondary">G54</text>
+  <text x="46" y="56" font-family="Arial, sans-serif" font-size="8" font-weight="bold" class="secondary">G59</text>
+</svg>

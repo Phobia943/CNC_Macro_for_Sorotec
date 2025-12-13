@@ -1,0 +1,27 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Ecken-Antastung mit Rotation -->
+  <defs>
+    <style>
+      .primary { fill: #E30613; }
+      .secondary { fill: #1A1A1A; }
+      .stroke { stroke: #1A1A1A; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Rotated workpiece -->
+  <rect class="secondary" x="24" y="24" width="28" height="28" rx="2" transform="rotate(-15 38 38)"/>
+
+  <!-- Corner points -->
+  <circle class="primary" cx="28" cy="26" r="4"/>
+  <circle class="primary" cx="28" cy="50" r="4"/>
+
+  <!-- Rotation angle arc -->
+  <path class="stroke" d="M 32 12 A 20 20 0 0 1 48 20" stroke="#E30613" stroke-width="2"/>
+  <polygon class="primary" points="48,18 52,20 48,22"/>
+
+  <!-- Angle symbol -->
+  <text x="36" y="18" font-family="Arial, sans-serif" font-size="12" font-weight="bold" class="primary">θ</text>
+
+  <!-- Probe indicator -->
+  <circle class="stroke" cx="28" cy="26" r="8" opacity="0.3"/>
+</svg>

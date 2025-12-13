@@ -1,0 +1,32 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Werkstueck-Dicken-Messung -->
+  <defs>
+    <style>
+      .primary { fill: #E30613; }
+      .secondary { fill: #1A1A1A; }
+      .stroke { stroke: #1A1A1A; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Workpiece -->
+  <rect class="secondary" x="16" y="28" width="32" height="12" rx="1"/>
+
+  <!-- Top probe -->
+  <circle class="primary" cx="32" cy="22" r="4"/>
+  <line class="stroke" x1="32" y1="18" x2="32" y2="10"/>
+  <path class="primary" d="M32 10 L28 14 L36 14 Z"/>
+
+  <!-- Bottom probe -->
+  <circle class="primary" cx="32" cy="46" r="4"/>
+  <line class="stroke" x1="32" y1="50" x2="32" y2="58"/>
+  <path class="primary" d="M32 58 L36 54 L28 54 Z"/>
+
+  <!-- Measurement line with dimension -->
+  <line class="stroke" x1="52" y1="28" x2="52" y2="40" stroke="#E30613" stroke-width="2"/>
+  <line class="stroke" x1="50" y1="28" x2="54" y2="28"/>
+  <line class="stroke" x1="50" y1="40" x2="54" y2="40"/>
+  <path class="primary" d="M52 30 L50 32 L54 32 Z"/>
+  <path class="primary" d="M52 38 L54 36 L50 36 Z"/>
+
+  <text x="56" y="36" font-family="Arial, sans-serif" font-size="10" font-weight="bold" class="primary">Z</text>
+</svg>
